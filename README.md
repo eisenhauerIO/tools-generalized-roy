@@ -1,1 +1,1 @@
-# tools-generalized-roy
+# Generalized Roy Model
