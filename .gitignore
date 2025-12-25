@@ -53,3 +53,7 @@ Thumbs.db
 *.grmpy.info
 *.grmpy.txt
 *.grmpy.pkl
+
+# Exception for test resources
+!grmpy/test/resources/*.grmpy.txt
+!grmpy/test/resources/*.grmpy.pkl
