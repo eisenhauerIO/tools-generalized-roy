@@ -21,7 +21,7 @@ jobs:
         python-version: '3.11'
     - run: sudo apt-get install -y pandoc
     - run: pip install hatch
-    - run: pip install -e .[docs]
+    - run: pip install -e .[dev]
     - run: hatch run build
     - uses: actions/upload-pages-artifact@v3
       if: github.ref == 'refs/heads/main'

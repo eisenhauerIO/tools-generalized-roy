@@ -15,7 +15,7 @@ jobs:
       with:
         python-version: '3.11'
     - run: pip install hatch
-    - run: pip install -e .[test]
+    - run: pip install -e .[dev]
     - run: hatch run test
 
   lint:

@@ -26,11 +26,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = [
+dev = [
     "pytest",
     "pytest-cov",
-]
-docs = [
     "sphinx>=6.0",
     "sphinx-rtd-theme",
     "myst-parser",
@@ -39,9 +37,6 @@ docs = [
     "ipykernel",
     "sphinxcontrib-bibtex",
     "nbconvert",
-]
-dev = [
-    "grmpy[test,docs]",
     "ruff",
     "pre-commit",
 ]
