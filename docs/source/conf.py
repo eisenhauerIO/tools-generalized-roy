@@ -50,7 +50,8 @@ html_context = {
     "conf_py_path": "/docs/source/",
 }
 
-# nbsphinx settings: don't execute notebooks during build (they need updating)
+# nbsphinx settings: don't execute notebooks (they require specific data files)
+# The notebooks can be run interactively but not during docs build
 nbsphinx_execute = "never"
 nbsphinx_allow_errors = True
 

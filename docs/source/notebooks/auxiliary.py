@@ -334,11 +334,11 @@ def plot_est_mte(rslt, file):
 
 def plot_joint_distribution_unobservables(df, df_eh):
     """This function plots the joint distribution of the relevant unobservables."""
-    g1 = sns.jointplot(df["V"], df["U1"]).set_axis_labels("$V$", "$U_1$", fontsize=15)
+    g1 = sns.jointplot(x=df["V"], y=df["U1"]).set_axis_labels("$V$", "$U_1$", fontsize=15)
     g1.fig.subplots_adjust(top=0.9)
     g1.fig.suptitle("Abscence of essential heterogeneity", fontsize=18)
 
-    g2 = sns.jointplot(df_eh["V"], df_eh["U1"]).set_axis_labels(
+    g2 = sns.jointplot(x=df_eh["V"], y=df_eh["U1"]).set_axis_labels(
         "$V$", "$U_1$", fontsize=15
     )
     g2.fig.subplots_adjust(top=0.9)
@@ -377,4 +377,4 @@ def plot_marginal_effects(file1, file2):
 
 def plot_joint_distribution_potential(df):
     """This function plots the joint distribution of potential outcomes."""
-    sns.jointplot(df["Y1"], df["Y0"]).set_axis_labels("$Y_1$", r"$Y_0$", fontsize=15)
+    sns.jointplot(x=df["Y1"], y=df["Y0"]).set_axis_labels("$Y_1$", r"$Y_0$", fontsize=15)
