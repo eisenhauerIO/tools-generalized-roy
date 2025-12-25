@@ -1,0 +1,69 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "grmpy"
+version = "1.0.0"
+description = "Simulation and estimation of the generalized Roy model"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "The grmpy Development Team", email = "eisenhauer@policy-lab.org" }
+]
+dependencies = [
+    "linearmodels",
+    "numpy",
+    "matplotlib",
+    "oyaml",
+    "pandas",
+    "scikit-learn",
+    "scikit-misc",
+    "scipy",
+    "seaborn",
+    "statsmodels",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-cov",
+]
+docs = [
+    "sphinx>=6.0",
+    "sphinx-rtd-theme",
+    "myst-parser",
+    "nbsphinx",
+    "pypandoc",
+    "ipykernel",
+    "sphinxcontrib-bibtex",
+    "nbconvert",
+]
+dev = [
+    "grmpy[test,docs]",
+    "ruff",
+    "pre-commit",
+]
+
+[tool.hatch.envs.default]
+features = ["dev"]
+
+[tool.hatch.envs.default.scripts]
+test = "pytest grmpy/test -v"
+build = "sphinx-build -b html docs/source docs/build/html"
+serve = "python -m http.server -d docs/build/html 8000"
+clean = "rm -rf docs/build"
+notebooks = "jupyter nbconvert --to notebook --execute --inplace docs/source/**/*.ipynb"
+lint = "ruff check grmpy"
+format = "ruff format grmpy"
+
+[tool.ruff]
+line-length = 88
+extend-exclude = ["docs/build"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.pytest.ini_options]
+testpaths = ["grmpy/test"]
