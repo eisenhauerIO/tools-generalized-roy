@@ -1,9 +1,9 @@
 """This module creates the contour plots for the bivariate normal distribution."""
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import multivariate_normal
 
+import matplotlib.pyplot as plt
+import numpy as np
 from fig_config import OUTPUT_DIR
+from scipy.stats import multivariate_normal
 
 plt.style.use("resources/grmpy.mplstyle")
 

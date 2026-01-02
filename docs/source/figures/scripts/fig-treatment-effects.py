@@ -1,15 +1,14 @@
 """"""
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import norm
 
+import matplotlib.pyplot as plt
+import numpy as np
 from fig_config import OUTPUT_DIR
+from scipy.stats import norm
 
 plt.style.use("resources/grmpy.mplstyle")
 
 
 def plot_treatment_effect():
-
     x_axis = np.arange(-2, 4, 0.001)
     ax = plt.figure(figsize=(14, 6))
 

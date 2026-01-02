@@ -1,6 +1,7 @@
 """This module creates all available figures and then provides them in a compiled
 document for review.
 """
+
 import os
 import subprocess
 
@@ -21,5 +22,4 @@ def create_figures():
 
 
 if __name__ == "__main__":
-
     create_figures()

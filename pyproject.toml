@@ -56,7 +56,7 @@ format = "ruff format grmpy"
 
 [tool.ruff]
 line-length = 88
-extend-exclude = ["docs/build"]
+extend-exclude = ["docs/build", "_external"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]

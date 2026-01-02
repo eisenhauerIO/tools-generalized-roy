@@ -1,4 +1,5 @@
 """The module provides basic auxiliary functions for the test modules."""
+
 import glob
 import os
 import shlex
@@ -70,20 +71,19 @@ def read_desc(fname):
                 if list_[0] == "Observed":
                     dict_["TREATED"][list_[0] + " " + list_[1]] = list_[2:]
                 else:
-                    dict_["TREATED"][
-                        list_[0] + " " + list_[1] + " " + list_[2]
-                    ] = list_[3:]
+                    dict_["TREATED"][list_[0] + " " + list_[1] + " " + list_[2]] = (
+                        list_[3:]
+                    )
             elif 38 <= i < 41:
                 if list_[0] == "Observed":
                     dict_["UNTREATED"][list_[0] + " " + list_[1]] = list_[2:]
                 else:
-                    dict_["UNTREATED"][
-                        list_[0] + " " + list_[1] + " " + list_[2]
-                    ] = list_[3:]
+                    dict_["UNTREATED"][list_[0] + " " + list_[1] + " " + list_[2]] = (
+                        list_[3:]
+                    )
 
         # Process the string in int and float values
         for key_ in dict_.keys():
-
             dict_[key_]["Number"] = [int(i) for i in dict_[key_]["Number"]]
             for subkey in [
                 "Observed Sample",

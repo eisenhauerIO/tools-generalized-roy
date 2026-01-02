@@ -9,13 +9,8 @@
 :maxdepth: 1
 
 economics
-installation
 tutorial
 reliability
-software_engineering
-contributing
-credits
-changes
 references
 notebooks/index
 ```

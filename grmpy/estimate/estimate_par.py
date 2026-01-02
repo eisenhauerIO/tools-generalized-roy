@@ -2,11 +2,12 @@
 The module provides auxiliary functions for the estimation process.
 """
 
+from random import randint
+
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from numpy.linalg import LinAlgError
-from random import randint
 from scipy.optimize import minimize
 from scipy.stats import norm, t
 from statsmodels.tools.numdiff import approx_fprime_cs
@@ -268,15 +269,16 @@ def create_rslt_df(dict_):
 
 
 def start_values(dict_, D, X1, X0, Z1, Z0, Y1, Y0, start_option):
-    """The function selects the start values for the minimization process. If option is
-    set to init the function returns the values that are specified in the initialization
-    file. Otherwise the function conducts a Probit estimation for determining the choice
-    related parameters as well as two OLS estimations for the outcome related parameters
-    associated with the different treatment states. In this case the sigma values are set
-    to the sum of residual squares of the particular OLS regression, whereas the rho
-    values are drawn randomly. Finally the sigma and rho values are converted by applying
-    a method based on Lokshin and Sajaia (2004) independent on the chosen start value
-    option.
+    """Select start values for the minimization process.
+
+    If option is set to init the function returns the values specified in the
+    initialization file. Otherwise the function conducts a Probit estimation for
+    determining the choice related parameters as well as two OLS estimations for
+    the outcome related parameters associated with the different treatment states.
+    In this case the sigma values are set to the sum of residual squares of the
+    particular OLS regression, whereas the rho values are drawn randomly. Finally
+    the sigma and rho values are converted by applying a method based on Lokshin
+    and Sajaia (2004) independent on the chosen start value option.
 
     Parameters
     ----------
@@ -363,12 +365,12 @@ def start_values(dict_, D, X1, X0, Z1, Z0, Y1, Y0, start_option):
 
 
 def start_value_adjustment(x):
-    """This function conducts an approach by Lokshin and Sajaia (2004) and takes the
-    logarithm of the sigma values as well as the inverse hyperbolic tangent of the speci-
-    fied start values for the rhovalues. The transformation will be inversed right within
-    the minimization interface function. Through this we ensure that the estimated values
-    for sigma are always larger than 0 and that the rho values are bounded between -1 and
-    1.
+    """Transform start values using Lokshin and Sajaia (2004) approach.
+
+    Takes the logarithm of sigma values and inverse hyperbolic tangent of rho
+    values. The transformation is inversed in the minimization interface. This
+    ensures estimated sigma values are always > 0 and rho values are bounded
+    between -1 and 1.
 
     Parameters
     ----------
@@ -474,10 +476,10 @@ def log_likelihood(
     sd1, sd0, rho1v, rho0v = x0[-4], x0[-2], x0[-3], x0[-1]
 
     nu1 = (Y1 - np.dot(beta1, X1.T)) / sd1
-    lambda1 = (np.dot(gamma, Z1.T) - rho1v * nu1) / (np.sqrt(1 - rho1v ** 2))
+    lambda1 = (np.dot(gamma, Z1.T) - rho1v * nu1) / (np.sqrt(1 - rho1v**2))
 
     nu0 = (Y0 - np.dot(beta0, X0.T)) / sd0
-    lambda0 = (np.dot(gamma, Z0.T) - rho0v * nu0) / (np.sqrt(1 - rho0v ** 2))
+    lambda0 = (np.dot(gamma, Z0.T) - rho0v * nu0) / (np.sqrt(1 - rho0v**2))
 
     treated = (1 / sd1) * norm.pdf(nu1) * norm.cdf(lambda1)
     untreated = (1 / sd0) * norm.pdf(nu0) * (1 - norm.cdf(lambda0))
@@ -534,8 +536,9 @@ def calculate_criteria(x0, X1, X0, Z1, Z0, Y1, Y0):
 def minimizing_interface(
     x0, X1, X0, Z1, Z0, Y1, Y0, num_treated, num_untreated, bfgs_dict, grad_opt
 ):
-    """This function is the objective for the minimization routine. It transforms the
-    provided parameters according to the and returns the associated log-likelihood value.
+    """Objective function for the minimization routine.
+
+    Transforms provided parameters and returns the associated log-likelihood.
 
     Parameters
     ----------
@@ -916,7 +919,7 @@ def gradient(X1, X0, Z1, Z0, nu1, nu0, lambda1, lambda0, gamma, sd1, sd0, rho1v,
             "ij, i ->ij",
             X1,
             -(norm.pdf(lambda1) / norm.cdf(lambda1))
-            * (rho1v / (np.sqrt(1 - rho1v ** 2) * sd1))
+            * (rho1v / (np.sqrt(1 - rho1v**2) * sd1))
             - nu1 / sd1,
         ),
         0,
@@ -929,7 +932,7 @@ def gradient(X1, X0, Z1, Z0, nu1, nu0, lambda1, lambda0, gamma, sd1, sd0, rho1v,
             X0,
             norm.pdf(lambda0)
             / (1 - norm.cdf(lambda0))
-            * (rho0v / (np.sqrt(1 - rho0v ** 2) * sd0))
+            * (rho0v / (np.sqrt(1 - rho0v**2) * sd0))
             - nu0 / sd0,
         ),
         0,
@@ -939,8 +942,8 @@ def gradient(X1, X0, Z1, Z0, nu1, nu0, lambda1, lambda0, gamma, sd1, sd0, rho1v,
         * (
             +1 / sd1
             - (norm.pdf(lambda1) / norm.cdf(lambda1))
-            * (rho1v * nu1 / (np.sqrt(1 - rho1v ** 2) * sd1))
-            - nu1 ** 2 / sd1
+            * (rho1v * nu1 / (np.sqrt(1 - rho1v**2) * sd1))
+            - nu1**2 / sd1
         ),
         keepdims=True,
     )
@@ -949,8 +952,8 @@ def gradient(X1, X0, Z1, Z0, nu1, nu0, lambda1, lambda0, gamma, sd1, sd0, rho1v,
         * (
             +1 / sd0
             + (norm.pdf(lambda0) / (1 - norm.cdf(lambda0)))
-            * (rho0v * nu0 / (np.sqrt(1 - rho0v ** 2) * sd0))
-            - nu0 ** 2 / sd0
+            * (rho0v * nu0 / (np.sqrt(1 - rho0v**2) * sd0))
+            - nu0**2 / sd0
         ),
         keepdims=True,
     )
@@ -958,7 +961,7 @@ def gradient(X1, X0, Z1, Z0, nu1, nu0, lambda1, lambda0, gamma, sd1, sd0, rho1v,
         (
             -(norm.pdf(lambda1) / norm.cdf(lambda1))
             * ((np.dot(gamma, Z1.T) * rho1v) - nu1)
-            / (1 - rho1v ** 2) ** (1 / 2)
+            / (1 - rho1v**2) ** (1 / 2)
         ),
         keepdims=True,
     )
@@ -967,7 +970,7 @@ def gradient(X1, X0, Z1, Z0, nu1, nu0, lambda1, lambda0, gamma, sd1, sd0, rho1v,
         (
             (norm.pdf(lambda0) / (1 - norm.cdf(lambda0)))
             * ((np.dot(gamma, Z0.T) * rho0v) - nu0)
-            / (1 - rho0v ** 2) ** (1 / 2)
+            / (1 - rho0v**2) ** (1 / 2)
         ),
         keepdims=True,
     )
@@ -976,14 +979,13 @@ def gradient(X1, X0, Z1, Z0, nu1, nu0, lambda1, lambda0, gamma, sd1, sd0, rho1v,
         np.einsum(
             "ij, i ->ij",
             Z1,
-            (norm.pdf(lambda1) / norm.cdf(lambda1)) * 1 / np.sqrt(1 - rho1v ** 2),
+            (norm.pdf(lambda1) / norm.cdf(lambda1)) * 1 / np.sqrt(1 - rho1v**2),
         )
     ) - sum(
         np.einsum(
             "ij, i ->ij",
             Z0,
-            (norm.pdf(lambda0) / (1 - norm.cdf(lambda0)))
-            * (1 / np.sqrt(1 - rho0v ** 2)),
+            (norm.pdf(lambda0) / (1 - norm.cdf(lambda0))) * (1 / np.sqrt(1 - rho0v**2)),
         )
     )
 
@@ -1042,10 +1044,10 @@ def gradient_hessian(x0, X1, X0, Z1, Z0, Y1, Y0):
     # compute gradient for beta 1
 
     nu1 = (Y1 - np.dot(beta1, X1.T)) / sd1
-    lambda1 = (np.dot(gamma, Z1.T) - rho1v * nu1) / (np.sqrt(1 - rho1v ** 2))
+    lambda1 = (np.dot(gamma, Z1.T) - rho1v * nu1) / (np.sqrt(1 - rho1v**2))
 
     nu0 = (Y0 - np.dot(beta0, X0.T)) / sd0
-    lambda0 = (np.dot(gamma, Z0.T) - rho0v * nu0) / (np.sqrt(1 - rho0v ** 2))
+    lambda0 = (np.dot(gamma, Z0.T) - rho0v * nu0) / (np.sqrt(1 - rho0v**2))
 
     grad = gradient(
         X1, X0, Z1, Z0, nu1, nu0, lambda1, lambda0, gamma, sd1, sd0, rho1v, rho0v
@@ -1054,7 +1056,7 @@ def gradient_hessian(x0, X1, X0, Z1, Z0, Y1, Y0):
     multiplier = np.concatenate(
         (
             np.ones(len(grad[:-4])),
-            np.array([1 / sd1, 1 / (1 - rho1v ** 2), 1 / sd0, 1 / (1 - rho0v ** 2)]),
+            np.array([1 / sd1, 1 / (1 - rho1v**2), 1 / sd0, 1 / (1 - rho0v**2)]),
         )
     )
 

@@ -1,17 +1,18 @@
-""" This script creates a figure to illustrate how the usual treatment effects can be
+"""This script creates a figure to illustrate how the usual treatment effects can be
 constructed by using differen weights on the marginal treatment effect.
 """
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import norm
-from scipy.integrate import quad
 
+import matplotlib.pyplot as plt
+import numpy as np
 from fig_config import OUTPUT_DIR, RESOURCE_DIR
+from scipy.integrate import quad
+from scipy.stats import norm
+
 from grmpy.read.read import read
 from grmpy.simulate.simulate_auxiliary import (
+    construct_covariance_matrix,
     mte_information,
     simulate_covariates,
-    construct_covariance_matrix,
 )
 
 filename = "/tutorial.grmpy.yml"

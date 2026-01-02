@@ -1,4 +1,5 @@
 """The module provides a random dictionary generating process for test purposes."""
+
 import collections
 import random
 import uuid

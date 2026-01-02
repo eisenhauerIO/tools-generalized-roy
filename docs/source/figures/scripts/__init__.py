@@ -1,10 +1,8 @@
 """The module allows to run tests from inside the interpreter."""
+
 import os
 
 import pytest
-
-from grmpy.estimate.estimate import fit
-from grmpy.simulate.simulate import simulate
 
 
 def test():

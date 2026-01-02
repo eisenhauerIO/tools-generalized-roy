@@ -1,7 +1,8 @@
-""" This module provides auxiliary functions for the simulate.py module. It includes
+"""This module provides auxiliary functions for the simulate.py module. It includes
 simulation processes of the unobservable and endogenous variables of the model as well
 as functions regarding the info file output.
 """
+
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -115,7 +116,6 @@ def print_info(init_dict, data_frame):
     cov = construct_covariance_matrix(init_dict)
 
     with open(source + ".grmpy.info", "w") as file_:
-
         # First we note some basic information ab out the dataset.
         header = "\n\n Number of Observations \n\n"
         file_.write(header)
@@ -135,7 +135,6 @@ def print_info(init_dict, data_frame):
 
         # Second, we describe the distribution of outcomes and effects.
         for label in ["Outcomes", "Effects"]:
-
             header = "\n\n Distribution of " + label + "\n\n"
             file_.write(header)
 
@@ -144,7 +143,6 @@ def print_info(init_dict, data_frame):
             file_.write(fmt.format(*args))
 
             for group in ["All", "Treated", "Untreated"]:
-
                 if label == "Outcomes":
                     data = data_frame[dep]
                 elif label == "Effects":
@@ -163,7 +161,7 @@ def print_info(init_dict, data_frame):
                     info = ["---"] * 5
                 elif pd.isnull(info[1]):
                     info[1] = "---"
-                    fmt = "  {:<10}" " {:>20.4f}" " {:>20}" + " {:>20.4f}" * 3 + "\n"
+                    fmt = "  {:<10} {:>20.4f} {:>20}" + " {:>20.4f}" * 3 + "\n"
 
                 file_.write(fmt.format(*[group] + info))
 
@@ -211,7 +209,6 @@ def mte_information(coeffs_treated, coeffs_untreated, cov, quantiles, x, dict_):
 
     # Construct auxiliary information
     if dict_["TREATED"]["order"] != dict_["UNTREATED"]["order"]:
-
         para_diff = []
         for var in labels:
             if var in dict_["TREATED"]["order"] and var in dict_["UNTREATED"]["order"]:
@@ -236,7 +233,6 @@ def mte_information(coeffs_treated, coeffs_untreated, cov, quantiles, x, dict_):
                 diff = -dict_["UNTREATED"]["params"][index]
             para_diff += [diff]
     else:
-
         para_diff = coeffs_treated - coeffs_untreated
     x = x[labels]
     MTE = []

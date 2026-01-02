@@ -1,17 +1,18 @@
 """The script creates a figure to illustrate the appearance of the marginal treatment
 effect in the abscence and presence of individual heterogeneity.
 """
-import numpy as np
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
+import numpy as np
 from fig_config import OUTPUT_DIR, RESOURCE_DIR
+
 from grmpy.read.read import read
-from grmpy.test.auxiliary import cleanup
 from grmpy.simulate.simulate import simulate
 from grmpy.simulate.simulate_auxiliary import (
-    mte_information,
     construct_covariance_matrix,
+    mte_information,
 )
+from grmpy.test.auxiliary import cleanup
 
 filename = "/tutorial.grmpy.yml"
 

@@ -1,4 +1,5 @@
 """This module contains methods for producing the estimation output files."""
+
 import time
 from textwrap import wrap
 
@@ -56,7 +57,7 @@ def print_logfile(init_dict, rslt, print_output):
     header += "=" * 80 + "\n"
 
     # Add estimation output
-    fmt = "{:<17}" + "{:>11}" + "{:>10}" * 3 + "{:>11}" + "{:>11}" "\n"
+    fmt = "{:<17}" + "{:>11}" + "{:>10}" * 3 + "{:>11}" + "{:>11}\n"
 
     header += fmt.format("", "coef", "std err", "t", "P>|t|", "[0.025", "0.975]")
     header += "-" * 80

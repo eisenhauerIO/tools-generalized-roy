@@ -1,19 +1,18 @@
 """This script replicates the results of Caneiro 2011 via using a
- mock data set and plots the original as well as the estimated mar-
- ginal treatment effect"""
+mock data set and plots the original as well as the estimated mar-
+ginal treatment effect"""
+
 import json
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-
-
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 from fig_config import OUTPUT_DIR, RESOURCE_DIR
-from grmpy.estimate.estimate import fit
-from grmpy.read.read import read
-from grmpy.plot.plot_auxiliary import mte_and_cof_int_par
 
+from grmpy.estimate.estimate import fit
+from grmpy.plot.plot_auxiliary import mte_and_cof_int_par
+from grmpy.read.read import read
 
 plt.style.use("resources/grmpy.mplstyle")
 
@@ -62,6 +61,5 @@ def plot_rslts(rslt, file):
 
 
 if __name__ == "__main__":
-
     rslt_dict = fit(RESOURCE_DIR + "/replication.grmpy.yml")
     plot_rslts(rslt_dict, RESOURCE_DIR + "/replication.grmpy.yml")

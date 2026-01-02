@@ -55,16 +55,27 @@ html_context = {
 nbsphinx_execute = "never"
 nbsphinx_allow_errors = True
 
+# MathJax configuration for proper LaTeX rendering in notebooks
+mathjax3_config = {
+    "tex": {
+        "inlineMath": [["$", "$"], ["\\(", "\\)"]],
+        "processEscapes": True,
+    },
+}
+
 # Add notebook info bar
-nbsphinx_prolog = r"""
-{% set docname = env.doc2path(env.docname, base=None) %}
+_gh_base = "https://github.com/eisenhauerIO/generalized-roy/blob/main/docs/source"
+_colab_base = "https://colab.research.google.com/github/eisenhauerIO/generalized-roy"
+
+nbsphinx_prolog = rf"""
+{{% set docname = env.doc2path(env.docname, base=None) %}}
 .. |colab| image:: https://colab.research.google.com/assets/colab-badge.svg
-    :target: https://colab.research.google.com/github/eisenhauerIO/generalized-roy/blob/main/docs/source/{{ docname }}
+    :target: {_colab_base}/blob/main/docs/source/{{{{ docname }}}}
 
 .. only:: html
 
     .. nbinfo::
-        Download the notebook `here <https://github.com/eisenhauerIO/generalized-roy/blob/main/docs/source/{{ docname }}>`__!
+        Download the notebook `here <{_gh_base}/{{{{ docname }}}}>`__!
         Interactive online version: |colab|
 
 """

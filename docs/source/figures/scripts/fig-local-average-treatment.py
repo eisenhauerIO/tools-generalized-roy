@@ -1,13 +1,13 @@
-"""This module contains the code for a local average treatment graph.
-"""
-import matplotlib.pyplot as plt
+"""This module contains the code for a local average treatment graph."""
 
+import matplotlib.pyplot as plt
 from fig_config import OUTPUT_DIR, RESOURCE_DIR
+
 from grmpy.read.read import read
 from grmpy.simulate.simulate_auxiliary import (
+    construct_covariance_matrix,
     mte_information,
     simulate_covariates,
-    construct_covariance_matrix,
 )
 
 filename = "/tutorial.grmpy.yml"

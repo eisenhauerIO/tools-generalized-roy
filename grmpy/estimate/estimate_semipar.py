@@ -5,6 +5,7 @@ Note: Semiparametric estimation requires the 'kernreg' package which
 only supports Python <3.9. For Python 3.11+, you may need to use
 a fork or alternative implementation.
 """
+
 try:
     import kernreg as kr
 
@@ -575,9 +576,7 @@ def _define_common_support(
     Common support lies beteen:
 
         {} and
-        {}""".format(
-                lower_limit, upper_limit
-            )
+        {}""".format(lower_limit, upper_limit)
         )
 
     if save_output is False:
@@ -704,7 +703,6 @@ def _find_limits(hist, treated, untreated):
     # If an empty histogram bin is found, the lower_limit is set to
     # the corresponding P(Z) value of the next bin above.
     for low in range(len(hist[0][0])):
-
         # Only consider values in the interval [0, 0.5)
         if hist[1][low] > 0.5:
             break
@@ -735,7 +733,6 @@ def _find_limits(hist, treated, untreated):
     # If an empty histogram bin is found, the upper_limit is set to the
     # current next bin.
     for up in reversed(range(len(hist[0][1]))):
-
         # Only consider values in the interval (0.5, 1]
         if hist[1][up] < 0.5:
             break
