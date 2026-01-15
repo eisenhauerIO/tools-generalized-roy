@@ -1,0 +1,142 @@
+"""
+Generalized Roy Model simulator adapter.
+
+Design Decision: This adapter wraps the existing simulate() logic while
+conforming to the Simulator interface for consistent orchestration.
+"""
+
+from typing import Any, Dict, Optional
+
+import numpy as np
+import pandas as pd
+
+from grmpy.core.contracts import SimulationConfig, SimulationResult
+from grmpy.core.exceptions import SimulationError
+from grmpy.simulators.base import Simulator
+
+
+class RoyModelSimulator(Simulator):
+    """
+    Generalized Roy Model data simulator.
+
+    Generates synthetic data according to the generalized Roy model
+    with configurable parameters for outcomes and selection.
+    """
+
+    def __init__(self):
+        self.config: Optional[SimulationConfig] = None
+
+    def connect(self, config: SimulationConfig) -> None:
+        """Initialize simulator with configuration."""
+        self.config = config
+
+    def validate_connection(self) -> bool:
+        """Verify simulator is properly configured."""
+        if self.config is None:
+            return False
+        # Basic validation
+        if self.config.agents <= 0:
+            return False
+        return True
+
+    def simulate(self, **kwargs) -> SimulationResult:
+        """
+        Execute simulation and return results.
+
+        This method wraps the legacy simulate functionality.
+        """
+        if self.config is None:
+            raise SimulationError("Simulator not connected")
+
+        # Set seed if provided
+        if self.config.seed is not None:
+            np.random.seed(self.config.seed)
+
+        # Import and use legacy simulation
+        try:
+            from grmpy.simulate.simulate_auxiliary import (
+                simulate_covariates,
+                simulate_outcomes,
+                simulate_unobservables,
+                write_output,
+            )
+        except ImportError as e:
+            raise SimulationError(
+                f"Failed to import legacy simulation module: {e}"
+            )
+
+        # Build legacy dict format
+        legacy_dict = self._build_legacy_dict()
+
+        # Execute simulation steps
+        U = simulate_unobservables(legacy_dict)
+        X = simulate_covariates(legacy_dict)
+        df = simulate_outcomes(legacy_dict, X, U)
+
+        # Optionally write output
+        if self.config.output_file:
+            df = write_output(legacy_dict, df)
+
+        # Build parameters dict for result
+        parameters = {
+            "agents": self.config.agents,
+            "seed": self.config.seed,
+            "coefficients_treated": self.config.coefficients_treated,
+            "coefficients_untreated": self.config.coefficients_untreated,
+            "coefficients_choice": self.config.coefficients_choice,
+            "covariance": self.config.covariance,
+        }
+
+        return SimulationResult(
+            data=df,
+            parameters=parameters,
+            metadata={"source": "roy_model"},
+        )
+
+    def _build_legacy_dict(self) -> Dict[str, Any]:
+        """
+        Build legacy dictionary format from new config.
+
+        Bridge to support existing simulation code during migration.
+        """
+        if self.config is None:
+            raise SimulationError("Simulator not connected")
+
+        # Determine number of covariates from coefficients
+        n_treated = len(self.config.coefficients_treated)
+        n_untreated = len(self.config.coefficients_untreated)
+        n_choice = len(self.config.coefficients_choice)
+
+        legacy_dict = {
+            "SIMULATION": {
+                "agents": self.config.agents,
+                "seed": self.config.seed,
+                "source": self.config.source,
+                "output_file": self.config.output_file,
+            },
+            "TREATED": {
+                "coeff": self.config.coefficients_treated,
+                "order": [f"X{i}" for i in range(n_treated)],
+            },
+            "UNTREATED": {
+                "coeff": self.config.coefficients_untreated,
+                "order": [f"X{i}" for i in range(n_untreated)],
+            },
+            "CHOICE": {
+                "coeff": self.config.coefficients_choice,
+                "order": [f"Z{i}" for i in range(n_choice)],
+            },
+            "DIST": {
+                "coeff": self.config.covariance,
+            },
+            "DETERMINISTIC": False,
+            "AUX": {},
+        }
+
+        return legacy_dict
+
+
+# Register this simulator
+def _register():
+    from grmpy.simulators.factory import register_simulator
+    register_simulator("roy_model", RoyModelSimulator)

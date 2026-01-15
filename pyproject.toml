@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "grmpy"
-version = "1.0.0"
+version = "2.0.0"
 description = "Simulation and estimation of the generalized Roy model"
 readme = "README.md"
 license = "MIT"
@@ -18,6 +18,7 @@ dependencies = [
     "matplotlib",
     "oyaml",
     "pandas",
+    "pyyaml",
     "scikit-learn",
     "scikit-misc",
     "scipy",
@@ -27,8 +28,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
-    "pytest-cov",
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-xdist>=3.0",
     "sphinx>=6.0",
     "sphinx-rtd-theme",
     "myst-parser",
@@ -41,25 +43,105 @@ dev = [
     "pre-commit",
 ]
 
+# -----------------------------------------------------------------------------
+# Hatch Build Configuration
+# -----------------------------------------------------------------------------
+
+[tool.hatch.build.targets.wheel]
+packages = ["science/grmpy", "grmpy"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/science",
+    "/grmpy",
+    "/docs",
+]
+
+# -----------------------------------------------------------------------------
+# Hatch Environments
+# -----------------------------------------------------------------------------
+
 [tool.hatch.envs.default]
 features = ["dev"]
 
 [tool.hatch.envs.default.scripts]
-test = "python -m pytest grmpy/test -v"
-pytest = "python -m pytest grmpy/test -v"
+# Legacy tests (old structure)
+test-legacy = "python -m pytest grmpy/test -v"
+# New tests (new structure)
+test = "python -m pytest science/grmpy/tests -v"
 build = "sphinx-build -b html docs/source docs/build/html"
 serve = "python -m http.server -d docs/build/html 8000"
 clean = "rm -rf docs/build"
 notebooks = "jupyter nbconvert --to notebook --execute --inplace docs/source/**/*.ipynb"
-lint = "ruff check grmpy"
-format = "ruff format grmpy"
+lint = "ruff check science/grmpy grmpy"
+format = "ruff format science/grmpy grmpy"
+
+# Test environment with specific scripts
+[tool.hatch.envs.test]
+features = ["dev"]
+
+[tool.hatch.envs.test.scripts]
+unit = "pytest science/grmpy/tests/unit -v"
+integration = "pytest science/grmpy/tests/integration -v -m integration"
+regression = "pytest science/grmpy/tests/regression -v -m regression"
+all = "pytest science/grmpy/tests -v"
+fast = "pytest science/grmpy/tests -v -m 'not slow'"
+coverage = "pytest science/grmpy/tests --cov=science/grmpy --cov-report=xml --cov-report=term-missing"
+parallel = "pytest science/grmpy/tests -v -n auto"
+
+# -----------------------------------------------------------------------------
+# Ruff Configuration (per coding standards)
+# -----------------------------------------------------------------------------
 
 [tool.ruff]
-line-length = 88
+line-length = 120
+target-version = "py311"
 extend-exclude = ["docs/build", "_external"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["grmpy"]
+
+# -----------------------------------------------------------------------------
+# Pytest Configuration
+# -----------------------------------------------------------------------------
+
 [tool.pytest.ini_options]
-testpaths = ["grmpy/test"]
+testpaths = ["science/grmpy/tests", "grmpy/test"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks integration tests",
+    "regression: marks regression tests against vault",
+]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+# -----------------------------------------------------------------------------
+# Coverage Configuration
+# -----------------------------------------------------------------------------
+
+[tool.coverage.run]
+source = ["science/grmpy"]
+branch = true
+omit = ["*/tests/*", "*/__init__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+fail_under = 80
+show_missing = true
