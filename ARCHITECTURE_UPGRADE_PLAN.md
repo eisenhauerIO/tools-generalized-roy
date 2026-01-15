@@ -15,7 +15,11 @@ This document outlines the plan to modernize grmpy's architecture by adopting pa
 ### What This Plan Does NOT Cover
 - Changes to the underlying econometric algorithms
 - New statistical methods or models
-- User-facing API breaking changes (backward compatibility maintained)
+
+### Breaking Changes Accepted
+- Public API will change to align with new architecture
+- No backward compatibility layer required
+- Clean slate approach for simpler, maintainable codebase
 
 ---
 
@@ -705,39 +709,730 @@ Update Sphinx configuration to auto-generate API docs from docstrings.
 | 6 | Engine orchestrator | Phases 2, 4, 5 | Medium |
 | 7 | Coding standards | All phases | Low |
 | 8 | Documentation | All phases | Medium |
+| 9 | Testing strategy | Phases 1-6 | High |
 
 ---
 
-## Backward Compatibility Strategy
+## Phase 9: Testing Strategy
 
-### Maintained APIs
-```python
-# These public APIs remain unchanged
-grmpy.fit(init_file)           # Works as before
-grmpy.simulate(init_file)      # Works as before
-grmpy.plot_mte(rslt, init_file) # Works as before
+### Current State Analysis
+
+| Issue | Impact |
+|-------|--------|
+| All 25 tests currently **SKIPPED** | No CI protection |
+| No mocking - full integration only | Slow test execution |
+| No parametrization | Repetitive test code |
+| No coverage enforcement | Unknown gaps |
+| Regression vault in JSON/PKL | Hard to review changes |
+
+### Target Test Architecture
+
+```
+science/grmpy/tests/
+├── __init__.py
+├── conftest.py                    # Shared fixtures, markers
+├── unit/
+│   ├── __init__.py
+│   ├── test_config.py             # Configuration parsing/validation
+│   ├── test_contracts.py          # Schema validation
+│   ├── test_factory.py            # Registry and factory functions
+│   ├── estimators/
+│   │   ├── test_base.py           # Interface compliance
+│   │   ├── test_parametric.py     # Parametric adapter unit tests
+│   │   └── test_semiparametric.py # Semiparametric adapter unit tests
+│   ├── simulators/
+│   │   └── test_roy_model.py      # Simulator unit tests
+│   └── visualization/
+│       └── test_mte_plot.py       # Plot generation tests
+├── integration/
+│   ├── __init__.py
+│   ├── test_estimation_pipeline.py    # End-to-end estimation
+│   ├── test_simulation_pipeline.py    # End-to-end simulation
+│   └── test_replication.py            # Carneiro et al. replication
+├── regression/
+│   ├── __init__.py
+│   ├── test_numerical_accuracy.py     # Regression tests against vault
+│   └── vault/                          # Expected results (version controlled)
+│       ├── parametric_mte.json
+│       ├── semiparametric_mte.json
+│       └── simulation_outputs.json
+└── resources/
+    ├── configs/                   # Test configuration files
+    └── data/                      # Test datasets
 ```
 
-### Deprecation Path
-```python
-# Old internal imports (deprecated with warnings)
-from grmpy.estimate.estimate import fit  # DeprecationWarning
+### 9.1 Test Configuration (conftest.py)
 
-# New internal imports (recommended)
-from grmpy.estimators.factory import create_estimator_manager
+```python
+# science/grmpy/tests/conftest.py
+
+import os
+import tempfile
+from pathlib import Path
+from typing import Generator
+
+import numpy as np
+import pandas as pd
+import pytest
+
+# -----------------------------------------------------------------------------
+# Markers
+# -----------------------------------------------------------------------------
+
+def pytest_configure(config):
+    """Register custom markers."""
+    config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
+    config.addinivalue_line("markers", "integration: marks integration tests")
+    config.addinivalue_line("markers", "regression: marks regression tests against vault")
+
+
+# -----------------------------------------------------------------------------
+# Fixtures: Environment
+# -----------------------------------------------------------------------------
+
+@pytest.fixture(scope="session")
+def test_resources_dir() -> Path:
+    """Path to test resources directory."""
+    return Path(__file__).parent / "resources"
+
+
+@pytest.fixture(scope="function")
+def temp_directory() -> Generator[Path, None, None]:
+    """
+    Provide isolated temporary directory for each test.
+
+    Design Decision: Function-scoped (not module) to ensure complete
+    test isolation. Slower but prevents cross-test contamination.
+    """
+    original_dir = os.getcwd()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        os.chdir(tmpdir)
+        yield Path(tmpdir)
+        os.chdir(original_dir)
+
+
+# -----------------------------------------------------------------------------
+# Fixtures: Reproducibility
+# -----------------------------------------------------------------------------
+
+@pytest.fixture(scope="function")
+def seeded_rng() -> np.random.Generator:
+    """
+    Provide seeded random generator for reproducible tests.
+
+    Design Decision: Uses numpy's new Generator API instead of
+    global seed for better isolation between tests.
+    """
+    return np.random.default_rng(seed=42)
+
+
+@pytest.fixture(scope="function")
+def deterministic_seed():
+    """Set global numpy seed for legacy code compatibility."""
+    np.random.seed(1223)
+    yield
+    # No cleanup needed - each test gets fresh seed
+
+
+# -----------------------------------------------------------------------------
+# Fixtures: Test Data Factories
+# -----------------------------------------------------------------------------
+
+@pytest.fixture
+def sample_estimation_data(seeded_rng) -> pd.DataFrame:
+    """
+    Generate minimal valid estimation dataset.
+
+    Returns:
+        DataFrame with Y, D, Z columns meeting schema requirements
+    """
+    n = 100
+    z = seeded_rng.normal(0, 1, n)
+    d = (z + seeded_rng.normal(0, 0.5, n) > 0).astype(int)
+    y = 1.0 + 0.5 * d + seeded_rng.normal(0, 1, n)
+
+    return pd.DataFrame({"Y": y, "D": d, "Z": z})
+
+
+@pytest.fixture
+def sample_simulation_config(test_resources_dir) -> Path:
+    """Path to minimal valid simulation config."""
+    return test_resources_dir / "configs" / "minimal_simulation.yml"
+
+
+@pytest.fixture
+def invalid_config_missing_field(temp_directory) -> Path:
+    """Config file missing required field for error testing."""
+    config_path = temp_directory / "invalid.yml"
+    config_path.write_text("simulation:\n  agents: 100\n")  # Missing required fields
+    return config_path
+
+
+# -----------------------------------------------------------------------------
+# Fixtures: Mock Objects
+# -----------------------------------------------------------------------------
+
+@pytest.fixture
+def mock_estimator():
+    """
+    Provide mock estimator for testing manager/factory without real computation.
+
+    Design Decision: Uses protocol-based mock to verify interface compliance
+    without coupling to specific implementations.
+    """
+    from unittest.mock import MagicMock
+    from grmpy.estimators.base import Estimator
+
+    mock = MagicMock(spec=Estimator)
+    mock.validate_connection.return_value = True
+    mock.get_required_columns.return_value = ["Y", "D", "Z"]
+    mock.fit.return_value = {"mte": np.zeros(10), "quantiles": np.linspace(0, 1, 10)}
+    return mock
+
+
+# -----------------------------------------------------------------------------
+# Fixtures: Regression Vault
+# -----------------------------------------------------------------------------
+
+@pytest.fixture(scope="session")
+def regression_vault(test_resources_dir) -> dict:
+    """
+    Load regression test expected values.
+
+    Design Decision: Session-scoped to load vault once. JSON format
+    for human-readable diffs in version control.
+    """
+    import json
+    vault_dir = test_resources_dir.parent / "regression" / "vault"
+    vault = {}
+    for vault_file in vault_dir.glob("*.json"):
+        with open(vault_file) as f:
+            vault[vault_file.stem] = json.load(f)
+    return vault
 ```
+
+### 9.2 Unit Test Patterns
+
+#### Contract Testing
+```python
+# science/grmpy/tests/unit/test_contracts.py
+
+import pytest
+import pandas as pd
+import numpy as np
+from grmpy.core.contracts import (
+    EstimationDataSchema,
+    SimulationDataSchema,
+    EstimationResult,
+    DataValidationError,
+)
+
+
+class TestEstimationDataSchema:
+    """Tests for estimation input data validation."""
+
+    def test_validate_accepts_valid_dataframe(self, sample_estimation_data):
+        """Schema accepts DataFrame with all required columns."""
+        schema = EstimationDataSchema()
+        schema.validate(sample_estimation_data)  # Should not raise
+
+    def test_validate_rejects_missing_columns(self):
+        """Schema raises DataValidationError listing missing columns."""
+        schema = EstimationDataSchema()
+        incomplete_df = pd.DataFrame({"Y": [1, 2], "D": [0, 1]})  # Missing Z
+
+        with pytest.raises(DataValidationError) as exc_info:
+            schema.validate(incomplete_df)
+
+        assert "Z" in str(exc_info.value)
+        assert "Missing required columns" in str(exc_info.value)
+
+    @pytest.mark.parametrize("missing_col", ["Y", "D", "Z"])
+    def test_validate_identifies_each_missing_column(self, missing_col):
+        """Schema correctly identifies which specific column is missing."""
+        schema = EstimationDataSchema()
+        cols = {"Y": [1], "D": [1], "Z": [1]}
+        del cols[missing_col]
+
+        with pytest.raises(DataValidationError) as exc_info:
+            schema.validate(pd.DataFrame(cols))
+
+        assert missing_col in str(exc_info.value)
+
+    def test_from_external_applies_field_mappings(self):
+        """Schema transforms external field names to standard names."""
+        schema = EstimationDataSchema()
+        schema.field_mappings = {"outcome": "Y", "treatment": "D", "instrument": "Z"}
+
+        external_df = pd.DataFrame({
+            "outcome": [1, 2],
+            "treatment": [0, 1],
+            "instrument": [0.5, -0.5]
+        })
+
+        result = schema.from_external(external_df)
+
+        assert list(result.columns) == ["Y", "D", "Z"]
+
+
+class TestEstimationResult:
+    """Tests for estimation result dataclass."""
+
+    def test_result_stores_all_required_fields(self):
+        """Result object stores MTE and related quantities."""
+        result = EstimationResult(
+            mte=np.array([0.1, 0.2]),
+            mte_x=np.array([0.1]),
+            mte_u=np.array([0.1]),
+            quantiles=np.array([0.25, 0.75]),
+            coefficients={"b0": np.array([1.0]), "b1": np.array([0.5])},
+        )
+
+        assert len(result.mte) == 2
+        assert result.quantiles[0] == 0.25
+
+    def test_result_metadata_defaults_to_empty_dict(self):
+        """Metadata field defaults to empty dict if not provided."""
+        result = EstimationResult(
+            mte=np.zeros(1),
+            mte_x=np.zeros(1),
+            mte_u=np.zeros(1),
+            quantiles=np.zeros(1),
+            coefficients={},
+        )
+
+        assert result.metadata == {}
+```
+
+#### Factory Testing
+```python
+# science/grmpy/tests/unit/test_factory.py
+
+import pytest
+from grmpy.estimators.base import Estimator
+from grmpy.estimators.factory import (
+    ESTIMATOR_REGISTRY,
+    register_estimator,
+    get_estimator,
+)
+
+
+class TestEstimatorRegistry:
+    """Tests for estimator registration and retrieval."""
+
+    def test_get_estimator_returns_parametric(self):
+        """Factory returns ParametricEstimator for 'parametric' key."""
+        estimator = get_estimator("parametric")
+        assert isinstance(estimator, Estimator)
+
+    def test_get_estimator_returns_semiparametric(self):
+        """Factory returns SemiparametricEstimator for 'semiparametric' key."""
+        estimator = get_estimator("semiparametric")
+        assert isinstance(estimator, Estimator)
+
+    def test_get_estimator_raises_for_unknown_method(self):
+        """Factory raises ValueError with available options for unknown method."""
+        with pytest.raises(ValueError) as exc_info:
+            get_estimator("unknown_method")
+
+        assert "unknown_method" in str(exc_info.value)
+        assert "parametric" in str(exc_info.value)  # Lists available
+
+    def test_register_estimator_adds_to_registry(self):
+        """Custom estimator can be registered at runtime."""
+        class CustomEstimator(Estimator):
+            # Minimal implementation for test
+            pass
+
+        register_estimator("custom", CustomEstimator)
+
+        assert "custom" in ESTIMATOR_REGISTRY
+        # Cleanup
+        del ESTIMATOR_REGISTRY["custom"]
+
+    def test_register_estimator_rejects_non_estimator_class(self):
+        """Registration fails for classes not implementing Estimator."""
+        class NotAnEstimator:
+            pass
+
+        with pytest.raises(TypeError) as exc_info:
+            register_estimator("invalid", NotAnEstimator)
+
+        assert "Estimator base class" in str(exc_info.value)
+```
+
+#### Interface Compliance Testing
+```python
+# science/grmpy/tests/unit/estimators/test_base.py
+
+import pytest
+from abc import ABC
+from grmpy.estimators.base import Estimator
+from grmpy.estimators.adapter_parametric import ParametricEstimator
+from grmpy.estimators.adapter_semiparametric import SemiparametricEstimator
+
+
+class TestEstimatorInterface:
+    """Verify all estimator implementations satisfy the interface contract."""
+
+    @pytest.mark.parametrize("estimator_class", [
+        ParametricEstimator,
+        SemiparametricEstimator,
+    ])
+    def test_implements_all_abstract_methods(self, estimator_class):
+        """Estimator subclass implements all required abstract methods."""
+        # If any abstract method is missing, instantiation will raise TypeError
+        instance = estimator_class()
+
+        # Verify key methods exist and are callable
+        assert callable(instance.connect)
+        assert callable(instance.validate_connection)
+        assert callable(instance.validate_data)
+        assert callable(instance.get_required_columns)
+        assert callable(instance.transform_outbound)
+        assert callable(instance.fit)
+        assert callable(instance.transform_inbound)
+
+    @pytest.mark.parametrize("estimator_class", [
+        ParametricEstimator,
+        SemiparametricEstimator,
+    ])
+    def test_get_required_columns_returns_list(self, estimator_class):
+        """get_required_columns returns a list of strings."""
+        instance = estimator_class()
+        columns = instance.get_required_columns()
+
+        assert isinstance(columns, list)
+        assert all(isinstance(col, str) for col in columns)
+```
+
+### 9.3 Integration Test Patterns
+
+```python
+# science/grmpy/tests/integration/test_estimation_pipeline.py
+
+import pytest
+import pandas as pd
+import numpy as np
+from grmpy.engine import fit, simulate
+from grmpy.core.contracts import EstimationResult
+
+
+@pytest.mark.integration
+@pytest.mark.slow
+class TestEstimationPipeline:
+    """End-to-end tests for complete estimation workflow."""
+
+    def test_parametric_estimation_produces_valid_result(
+        self, temp_directory, test_resources_dir
+    ):
+        """
+        Full parametric estimation pipeline returns valid EstimationResult.
+
+        Pipeline: config → simulate → fit → result
+        """
+        config_path = test_resources_dir / "configs" / "parametric_test.yml"
+
+        # Run simulation to generate data
+        simulated_data = simulate(str(config_path))
+        assert isinstance(simulated_data, pd.DataFrame)
+        assert len(simulated_data) > 0
+
+        # Run estimation
+        result = fit(str(config_path))
+
+        # Verify result contract
+        assert isinstance(result, EstimationResult)
+        assert result.mte is not None
+        assert len(result.mte) == len(result.quantiles)
+        assert "b0" in result.coefficients
+        assert "b1" in result.coefficients
+
+    def test_semiparametric_estimation_produces_valid_result(
+        self, temp_directory, test_resources_dir
+    ):
+        """
+        Full semiparametric estimation pipeline returns valid EstimationResult.
+        """
+        config_path = test_resources_dir / "configs" / "semiparametric_test.yml"
+
+        result = fit(str(config_path))
+
+        assert isinstance(result, EstimationResult)
+        assert result.metadata.get("method") == "semiparametric"
+
+    def test_estimation_fails_gracefully_with_invalid_config(
+        self, invalid_config_missing_field
+    ):
+        """
+        Estimation raises ConfigurationError with helpful message for invalid config.
+        """
+        from grmpy.core.exceptions import ConfigurationError
+
+        with pytest.raises(ConfigurationError) as exc_info:
+            fit(str(invalid_config_missing_field))
+
+        # Error message should guide user to fix the issue
+        assert "missing" in str(exc_info.value).lower() or "required" in str(exc_info.value).lower()
+```
+
+### 9.4 Regression Test Patterns
+
+```python
+# science/grmpy/tests/regression/test_numerical_accuracy.py
+
+import pytest
+import numpy as np
+from grmpy.engine import fit
+
+
+@pytest.mark.regression
+class TestNumericalAccuracy:
+    """
+    Regression tests ensuring numerical results match expected values.
+
+    Design Decision: Uses JSON vault for expected values to enable
+    human-readable diffs in pull request reviews. Tolerances set based
+    on statistical precision requirements.
+    """
+
+    DECIMAL_PRECISION = 6  # Match to 6 decimal places
+
+    def test_parametric_mte_matches_vault(
+        self, test_resources_dir, regression_vault, deterministic_seed
+    ):
+        """
+        Parametric MTE computation matches regression vault values.
+
+        Constraint: Any change to MTE values must be intentional and
+        reviewed. Vault update requires explicit justification.
+        """
+        config_path = test_resources_dir / "configs" / "regression_parametric.yml"
+
+        result = fit(str(config_path))
+        expected = regression_vault["parametric_mte"]
+
+        np.testing.assert_array_almost_equal(
+            result.mte,
+            np.array(expected["mte"]),
+            decimal=self.DECIMAL_PRECISION,
+            err_msg="MTE values changed from regression vault"
+        )
+
+    def test_semiparametric_mte_matches_vault(
+        self, test_resources_dir, regression_vault, deterministic_seed
+    ):
+        """Semiparametric MTE computation matches regression vault values."""
+        config_path = test_resources_dir / "configs" / "regression_semiparametric.yml"
+
+        result = fit(str(config_path))
+        expected = regression_vault["semiparametric_mte"]
+
+        np.testing.assert_array_almost_equal(
+            result.mte,
+            np.array(expected["mte"]),
+            decimal=self.DECIMAL_PRECISION,
+        )
+
+    def test_carneiro_replication_matches_published_results(
+        self, test_resources_dir, regression_vault, deterministic_seed
+    ):
+        """
+        Carneiro et al. (2011) replication matches published MTE curve.
+
+        Reference: Heckman, Urzua, Vytlacil (2006) / Carneiro et al. (2011)
+        This test validates the core econometric implementation.
+        """
+        config_path = test_resources_dir / "configs" / "carneiro_replication.yml"
+
+        result = fit(str(config_path))
+        expected = regression_vault["carneiro_replication"]
+
+        np.testing.assert_array_almost_equal(
+            result.mte,
+            np.array(expected["mte"]),
+            decimal=4,  # Published precision
+            err_msg="Carneiro replication diverged from published results"
+        )
+```
+
+### 9.5 Test Configuration (pyproject.toml)
+
+```toml
+[tool.pytest.ini_options]
+testpaths = ["science/grmpy/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks integration tests",
+    "regression: marks regression tests against vault",
+]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["science/grmpy"]
+branch = true
+omit = ["*/tests/*", "*/__init__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+fail_under = 80
+show_missing = true
+```
+
+### 9.6 CI/CD Pipeline Updates
+
+```yaml
+# .github/workflows/ci.yml
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install hatch
+      - name: Run unit tests
+        run: hatch run test:unit
+
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install hatch
+      - name: Run integration tests
+        run: hatch run test:integration
+
+  test-regression:
+    name: Regression Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install hatch
+      - name: Run regression tests
+        run: hatch run test:regression
+
+  coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: [test-unit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install hatch
+      - name: Generate coverage
+        run: hatch run test:coverage
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage.xml
+          fail_ci_if_error: true
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install hatch
+      - name: Run linter
+        run: hatch run lint
+      - name: Check formatting
+        run: hatch run format --check
+```
+
+### 9.7 Hatch Environment Scripts
+
+```toml
+# pyproject.toml additions
+
+[tool.hatch.envs.test]
+dependencies = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-xdist>=3.0",  # Parallel execution
+]
+
+[tool.hatch.envs.test.scripts]
+unit = "pytest science/grmpy/tests/unit -v"
+integration = "pytest science/grmpy/tests/integration -v -m integration"
+regression = "pytest science/grmpy/tests/regression -v -m regression"
+all = "pytest science/grmpy/tests -v"
+fast = "pytest science/grmpy/tests -v -m 'not slow'"
+coverage = "pytest science/grmpy/tests --cov=science/grmpy --cov-report=xml --cov-report=term-missing"
+parallel = "pytest science/grmpy/tests -v -n auto"  # Use all CPUs
+```
+
+### 9.8 Testing Migration Strategy
+
+| Step | Action | Validates |
+|------|--------|-----------|
+| 1 | Create new test directory structure | Directory layout |
+| 2 | Write conftest.py with fixtures | Test infrastructure |
+| 3 | Write contract tests first | Schema definitions |
+| 4 | Write factory/registry tests | Extension mechanism |
+| 5 | Migrate unit tests with mocking | Component isolation |
+| 6 | Migrate integration tests | Pipeline correctness |
+| 7 | Convert regression vault to JSON | Reviewable expected values |
+| 8 | Enable coverage enforcement | Quality gate |
+| 9 | Remove skip markers from old tests | Full CI protection |
 
 ---
 
 ## Success Criteria
 
-1. All existing tests pass without modification
-2. Public API (`fit`, `simulate`, `plot_mte`) unchanged
-3. New estimators can be registered without modifying core code
-4. Configuration defaults are externalized to YAML
-5. All functions have type hints
-6. Documentation explains design decisions (why, not what)
-7. Code passes ruff and black with specified configuration
+1. **Tests enabled and passing** - All tests run in CI (no skipped tests)
+2. **Coverage ≥ 80%** - Enforced in CI pipeline
+3. **Regression vault in JSON** - Human-readable diffs in PRs
+4. **Test isolation** - Each test runs independently
+5. **Fast feedback** - Unit tests complete in < 30 seconds
+6. **New estimators testable** - Interface compliance tests auto-include new adapters
+7. **Configuration defaults externalized** - YAML files for defaults
+8. **All functions have type hints** - Enforced by ruff
+9. **Documentation explains why** - Design rationale captured
+10. **Code passes ruff and black** - 120 char lines, consistent style
 
 ---
 
@@ -745,10 +1440,11 @@ from grmpy.estimators.factory import create_estimator_manager
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Breaking existing user code | High | Maintain backward-compatible wrapper functions |
-| Over-engineering for academic use case | Medium | Keep abstractions minimal, document extension points |
-| Test coverage gaps during migration | High | Migrate tests alongside code, maintain CI/CD |
-| Performance regression | Low | Benchmark before/after, profile critical paths |
+| Numerical precision drift | High | Regression vault with strict tolerances |
+| Slow test suite | Medium | Parallel execution, fast/slow markers |
+| Flaky tests from randomness | Medium | Seeded RNG fixtures, deterministic mode |
+| Coverage gaming | Low | Review coverage reports, require meaningful tests |
+| Breaking changes undetected | High | Integration tests cover full pipeline |
 
 ---
 
