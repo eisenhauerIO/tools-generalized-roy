@@ -2,10 +2,12 @@
 Semiparametric LIV estimator adapter.
 
 Design Decision: This adapter wraps the existing semipar_fit() logic while
-conforming to the Estimator interface for consistent orchestration.
+conforming to the Estimator interface for consistent orchestration. This
+enables using the robust LIV algorithms while providing modern extensibility.
 
 Assumption: No distributional assumptions on unobservables. Uses Local
-Instrumental Variables (LIV) for flexible MTE estimation.
+Instrumental Variables (LIV) for flexible MTE estimation at the cost of
+requiring larger sample sizes than parametric methods.
 """
 
 from typing import Any, Dict, List, Optional
@@ -26,28 +28,62 @@ class SemiparametricEstimator(Estimator):
     local polynomial regression for MTE estimation.
 
     Design Decision: Uses local polynomial regression for flexibility
-    at the cost of requiring larger sample sizes.
+    at the cost of requiring larger sample sizes. The minimum sample
+    size is configurable via EstimationConfig.min_sample_size to allow
+    users to adjust based on their specific use case.
     """
 
     def __init__(self):
         self.config: Optional[EstimationConfig] = None
 
     def connect(self, config: EstimationConfig) -> None:
-        """Initialize estimator with configuration."""
+        """
+        Initialize estimator with configuration.
+
+        Args:
+            config: EstimationConfig containing method parameters including
+                bandwidth, gridsize, and minimum sample size settings.
+        """
         self.config = config
 
     def validate_connection(self) -> bool:
-        """Verify estimator is properly configured."""
+        """
+        Verify estimator is properly configured.
+
+        Returns:
+            True if config has been set via connect(), False otherwise.
+        """
         return self.config is not None
 
     def get_required_columns(self) -> List[str]:
-        """Return list of required DataFrame columns."""
+        """
+        Return list of required DataFrame columns.
+
+        Returns:
+            List of column names that must be present in input data.
+        """
         if self.config is None:
             return ["Y", "D"]
         return [self.config.dependent, self.config.treatment]
 
     def validate_data(self, data: pd.DataFrame) -> None:
-        """Validate input data meets estimator requirements."""
+        """
+        Validate input data meets estimator requirements.
+
+        Checks for required columns, validates treatment is binary, and
+        ensures sufficient sample size for local polynomial regression.
+
+        Design Decision: Minimum sample size is read from config rather
+        than hardcoded, allowing users to override the default (100) when
+        they have domain knowledge justifying a different threshold.
+
+        Args:
+            data: DataFrame to validate.
+
+        Raises:
+            DataValidationError: If required columns are missing, treatment
+                is not binary, or sample size is below minimum.
+        """
         required = self.get_required_columns()
         missing = set(required) - set(data.columns)
         if missing:
@@ -66,16 +102,28 @@ class SemiparametricEstimator(Estimator):
                     f"Found values: {sorted(unique_vals)}"
                 )
 
-        # Semiparametric requires larger samples
-        min_sample_size = 100
+        # Semiparametric requires larger samples for reliable local polynomial regression
+        min_sample_size = self.config.min_sample_size if self.config else 100
         if len(data) < min_sample_size:
             raise DataValidationError(
                 f"Semiparametric estimation requires at least {min_sample_size} "
-                f"observations. Got: {len(data)}"
+                f"observations for reliable local polynomial regression. "
+                f"Got: {len(data)}. Adjust min_sample_size in config if needed."
             )
 
     def transform_outbound(self, data: pd.DataFrame) -> Dict[str, Any]:
-        """Transform DataFrame to format for estimation."""
+        """
+        Transform DataFrame to format for estimation.
+
+        Args:
+            data: DataFrame in standard format with required columns.
+
+        Returns:
+            Dictionary containing 'data' and 'config' keys for fit() method.
+
+        Raises:
+            EstimationError: If estimator not connected.
+        """
         if self.config is None:
             raise EstimationError("Estimator not connected")
 
@@ -88,12 +136,31 @@ class SemiparametricEstimator(Estimator):
         """
         Execute semiparametric LIV estimation.
 
-        This method wraps the legacy semipar_fit functionality.
+        Wraps the legacy semipar_fit() function which implements Local
+        Instrumental Variables estimation using local polynomial regression.
+
+        Args:
+            data: Dictionary from transform_outbound() containing DataFrame
+                and config.
+            **kwargs: Additional arguments (for interface compatibility).
+
+        Returns:
+            Dictionary containing raw estimation results including:
+            - mte: Marginal treatment effect values
+            - mte_x, mte_u: Observable and unobservable MTE components
+            - quantiles: Evaluation points
+            - b0, b1: Estimated coefficients
+
+        Raises:
+            EstimationError: If legacy module import fails (kernreg package
+                required) or estimation encounters issues.
         """
         df = data["data"]
         config = data["config"]
 
         # Import legacy estimation function
+        # Design Decision: Keep core algorithms in legacy module to avoid
+        # introducing bugs in complex statistical code during migration
         try:
             from grmpy.estimate.estimate_semipar import semipar_fit
         except ImportError as e:
@@ -117,7 +184,19 @@ class SemiparametricEstimator(Estimator):
         return result
 
     def transform_inbound(self, results: Dict[str, Any]) -> EstimationResult:
-        """Convert raw results to standard format."""
+        """
+        Convert raw results to standard format.
+
+        Transforms legacy result dictionary to EstimationResult dataclass
+        for consistent downstream processing.
+
+        Args:
+            results: Dictionary from fit() containing raw estimation output.
+
+        Returns:
+            EstimationResult with standardized fields for MTE, coefficients,
+            and metadata including bandwidth and gridsize used.
+        """
         return EstimationResult(
             mte=np.array(results.get("mte", [])),
             mte_x=np.array(results.get("mte_x", [])),
@@ -140,7 +219,16 @@ class SemiparametricEstimator(Estimator):
         """
         Build legacy dictionary format from new config.
 
-        Bridge to support existing estimation code during migration.
+        Design Decision: This bridge function enables gradual migration
+        from the old dict-based configuration to typed dataclasses without
+        rewriting the core LIV estimation algorithms.
+
+        Args:
+            config: Typed EstimationConfig object.
+            data: DataFrame to extract column information from.
+
+        Returns:
+            Dictionary in legacy format expected by semipar_fit().
         """
         all_cols = list(data.columns)
         outcome_col = config.dependent

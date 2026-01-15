@@ -147,6 +147,11 @@ class EstimationConfig:
     bandwidth: Optional[float] = None
     gridsize: int = 500
     ps_range: tuple = (0.005, 0.995)
+    # Minimum sample size for semiparametric estimation
+    # Design Decision: Semiparametric LIV requires sufficient observations
+    # for local polynomial regression. 100 is a conservative minimum based
+    # on simulation studies showing unreliable estimates with fewer points.
+    min_sample_size: int = 100
 
     def validate(self) -> None:
         """

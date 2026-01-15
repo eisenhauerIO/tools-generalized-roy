@@ -31,6 +31,10 @@ DEFAULTS: Dict[str, Any] = {
         "tolerance": 1e-6,
         "gridsize": 500,
         "ps_range": [0.005, 0.995],
+        # Minimum sample size for semiparametric estimation
+        # Design Decision: 100 is conservative based on simulation studies
+        # showing unreliable local polynomial estimates with fewer points
+        "min_sample_size": 100,
     },
     "SIMULATION": {
         "agents": 1000,
