@@ -1,19 +1,7 @@
 """
-Simulators module containing base interface, factory, and adapters.
+Simulators module for generating synthetic Roy model data.
 """
 
-from grmpy.simulators.base import Simulator
-from grmpy.simulators.factory import (
-    SIMULATOR_REGISTRY,
-    get_simulator,
-    register_simulator,
-)
-from grmpy.simulators.manager import SimulatorManager
+from grmpy.simulators.adapter_roy_model import simulate
 
-__all__ = [
-    "Simulator",
-    "SimulatorManager",
-    "SIMULATOR_REGISTRY",
-    "get_simulator",
-    "register_simulator",
-]
+__all__ = ["simulate"]

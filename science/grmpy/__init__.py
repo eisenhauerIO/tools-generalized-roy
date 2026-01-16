@@ -28,17 +28,14 @@ __version__ = "2.0.0"
 # Public API
 from grmpy.engine import fit, plot_mte, simulate
 
-# Register built-in adapters
+# Estimator registration for extensibility
 from grmpy.estimators.adapter_parametric import ParametricEstimator
 from grmpy.estimators.adapter_semiparametric import SemiparametricEstimator
 from grmpy.estimators.factory import register_estimator
-from grmpy.simulators.adapter_roy_model import RoyModelSimulator
-from grmpy.simulators.factory import register_simulator
 
-# Auto-register built-in implementations
+# Auto-register built-in estimators
 register_estimator("parametric", ParametricEstimator)
 register_estimator("semiparametric", SemiparametricEstimator)
-register_simulator("roy_model", RoyModelSimulator)
 
 __all__ = [
     "fit",
@@ -47,5 +44,4 @@ __all__ = [
     "__version__",
     # For extension
     "register_estimator",
-    "register_simulator",
 ]

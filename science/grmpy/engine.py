@@ -82,14 +82,10 @@ def simulate(config_path: Union[str, Path]) -> pd.DataFrame:
         >>> data = grmpy.simulate("simulation.grmpy.yml")
         >>> print(data.head())
     """
-    from grmpy.simulators.factory import create_simulator_manager
+    from grmpy.simulators import simulate as run_simulation
 
-    # Create configured manager
-    manager = create_simulator_manager(str(config_path))
-    manager.connect()
-
-    # Execute simulation
-    return manager.simulate()
+    config = process_config(str(config_path))
+    return run_simulation(config)
 
 
 def plot_mte(

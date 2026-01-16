@@ -1,182 +1,128 @@
 """
-Generalized Roy Model simulator adapter.
+Generalized Roy Model simulator.
 
-Design Decision: This adapter wraps the existing simulate() logic while
-conforming to the Simulator interface for consistent orchestration. This
-enables using the validated simulation algorithms while providing a modern,
-extensible interface.
+Provides a straightforward simulate() function for generating synthetic
+data according to the generalized Roy model specification.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
 
-from grmpy.core.contracts import SimulationConfig, SimulationResult
-from grmpy.core.exceptions import SimulationError
-from grmpy.simulators.base import Simulator
+from grmpy.core.contracts import Config, SimulationConfig
+from grmpy.core.exceptions import ConfigurationError, SimulationError
 
 
-class RoyModelSimulator(Simulator):
+def simulate(config: Config) -> pd.DataFrame:
     """
-    Generalized Roy Model data simulator.
+    Generate synthetic data according to the generalized Roy model.
 
-    Generates synthetic data according to the generalized Roy model
-    with configurable parameters for outcomes and selection.
+    Executes simulation by:
+    1. Validating configuration
+    2. Setting random seed for reproducibility
+    3. Simulating unobservables from multivariate normal
+    4. Simulating covariates
+    5. Computing outcomes and treatment decisions
 
-    Design Decision: Wraps legacy simulation functions to leverage
-    tested code while providing modern interface for extension.
+    Args:
+        config: Configuration object containing simulation parameters.
+
+    Returns:
+        DataFrame with simulated data including:
+        - Y: Observed outcome
+        - Y_1, Y_0: Potential outcomes
+        - D: Treatment indicator
+        - U_1, U_0, V: Unobservables
+
+    Raises:
+        ConfigurationError: If simulation configuration is missing.
+        SimulationError: If legacy module import fails or simulation errors.
     """
-
-    def __init__(self):
-        self.config: Optional[SimulationConfig] = None
-
-    def connect(self, config: SimulationConfig) -> None:
-        """
-        Initialize simulator with configuration.
-
-        Args:
-            config: SimulationConfig containing number of agents, seed,
-                coefficients, and covariance matrix parameters.
-        """
-        self.config = config
-
-    def validate_connection(self) -> bool:
-        """
-        Verify simulator is properly configured.
-
-        Checks that config is set and agents count is positive.
-
-        Returns:
-            True if config is valid, False otherwise.
-        """
-        if self.config is None:
-            return False
-        if self.config.agents <= 0:
-            return False
-        return True
-
-    def simulate(self, **kwargs) -> SimulationResult:
-        """
-        Execute simulation and return results.
-
-        Generates synthetic Roy model data by:
-        1. Setting random seed for reproducibility
-        2. Simulating unobservables from multivariate normal
-        3. Simulating covariates
-        4. Computing outcomes and treatment decisions
-
-        Design Decision: Wraps legacy simulate_* functions rather than
-        reimplementing to avoid introducing bugs in statistical code.
-
-        Args:
-            **kwargs: Additional arguments (for interface compatibility).
-
-        Returns:
-            SimulationResult containing:
-            - data: DataFrame with Y, Y_1, Y_0, D, and unobservables
-            - parameters: Dict of simulation parameters used
-            - metadata: Source information
-
-        Raises:
-            SimulationError: If not connected or legacy module import fails.
-        """
-        if self.config is None:
-            raise SimulationError("Simulator not connected")
-
-        # Set seed if provided for reproducibility
-        if self.config.seed is not None:
-            np.random.seed(self.config.seed)
-
-        # Import and use legacy simulation
-        # Design Decision: Keep core simulation in legacy module during
-        # migration to avoid introducing bugs in validated statistical code
-        try:
-            from grmpy.simulate.simulate_auxiliary import (
-                simulate_covariates,
-                simulate_outcomes,
-                simulate_unobservables,
-                write_output,
-            )
-        except ImportError as e:
-            raise SimulationError(
-                f"Failed to import legacy simulation module: {e}"
-            )
-
-        # Build legacy dict format
-        legacy_dict = self._build_legacy_dict()
-
-        # Execute simulation steps
-        U = simulate_unobservables(legacy_dict)
-        X = simulate_covariates(legacy_dict)
-        df = simulate_outcomes(legacy_dict, X, U)
-
-        # Optionally write output
-        if self.config.output_file:
-            df = write_output(legacy_dict, df)
-
-        # Build parameters dict for result
-        parameters = {
-            "agents": self.config.agents,
-            "seed": self.config.seed,
-            "coefficients_treated": self.config.coefficients_treated,
-            "coefficients_untreated": self.config.coefficients_untreated,
-            "coefficients_choice": self.config.coefficients_choice,
-            "covariance": self.config.covariance,
-        }
-
-        return SimulationResult(
-            data=df,
-            parameters=parameters,
-            metadata={"source": "roy_model"},
+    if config.simulation is None:
+        raise ConfigurationError(
+            "No simulation configuration found in config file. "
+            "Please add a SIMULATION section."
         )
 
-    def _build_legacy_dict(self) -> Dict[str, Any]:
-        """
-        Build legacy dictionary format from new config.
+    sim_config = config.simulation
 
-        Design Decision: This bridge function enables gradual migration
-        from the old dict-based configuration to typed dataclasses without
-        rewriting the core simulation algorithms.
+    # Validate basic requirements
+    if sim_config.agents <= 0:
+        raise ConfigurationError("Number of agents must be positive")
 
-        Returns:
-            Dictionary in legacy format expected by simulate_* functions.
+    # Set seed if provided for reproducibility
+    if sim_config.seed is not None:
+        np.random.seed(sim_config.seed)
 
-        Raises:
-            SimulationError: If simulator not connected.
-        """
-        if self.config is None:
-            raise SimulationError("Simulator not connected")
+    # Import legacy simulation functions
+    try:
+        from grmpy.simulate.simulate_auxiliary import (
+            simulate_covariates,
+            simulate_outcomes,
+            simulate_unobservables,
+            write_output,
+        )
+    except ImportError as e:
+        raise SimulationError(f"Failed to import legacy simulation module: {e}")
 
-        # Determine number of covariates from coefficients
-        n_treated = len(self.config.coefficients_treated)
-        n_untreated = len(self.config.coefficients_untreated)
-        n_choice = len(self.config.coefficients_choice)
+    # Build legacy dict format for compatibility
+    legacy_dict = _build_legacy_dict(sim_config)
 
-        legacy_dict = {
-            "SIMULATION": {
-                "agents": self.config.agents,
-                "seed": self.config.seed,
-                "source": self.config.source,
-                "output_file": self.config.output_file,
-            },
-            "TREATED": {
-                "coeff": self.config.coefficients_treated,
-                "order": [f"X{i}" for i in range(n_treated)],
-            },
-            "UNTREATED": {
-                "coeff": self.config.coefficients_untreated,
-                "order": [f"X{i}" for i in range(n_untreated)],
-            },
-            "CHOICE": {
-                "coeff": self.config.coefficients_choice,
-                "order": [f"Z{i}" for i in range(n_choice)],
-            },
-            "DIST": {
-                "coeff": self.config.covariance,
-            },
-            "DETERMINISTIC": False,
-            "AUX": {},
-        }
+    # Execute simulation steps
+    U = simulate_unobservables(legacy_dict)
+    X = simulate_covariates(legacy_dict)
+    df = simulate_outcomes(legacy_dict, X, U)
 
-        return legacy_dict
+    # Optionally write output
+    if sim_config.output_file:
+        df = write_output(legacy_dict, df)
+
+    return df
+
+
+def _build_legacy_dict(sim_config: SimulationConfig) -> Dict[str, Any]:
+    """
+    Build legacy dictionary format from SimulationConfig.
+
+    This bridge function enables using the validated legacy simulation
+    algorithms with the new typed configuration system.
+
+    Args:
+        sim_config: SimulationConfig with simulation parameters.
+
+    Returns:
+        Dictionary in legacy format expected by simulate_* functions.
+    """
+    # Determine number of covariates from coefficients
+    n_treated = len(sim_config.coefficients_treated)
+    n_untreated = len(sim_config.coefficients_untreated)
+    n_choice = len(sim_config.coefficients_choice)
+
+    legacy_dict = {
+        "SIMULATION": {
+            "agents": sim_config.agents,
+            "seed": sim_config.seed,
+            "source": sim_config.source,
+            "output_file": sim_config.output_file,
+        },
+        "TREATED": {
+            "coeff": sim_config.coefficients_treated,
+            "order": [f"X{i}" for i in range(n_treated)],
+        },
+        "UNTREATED": {
+            "coeff": sim_config.coefficients_untreated,
+            "order": [f"X{i}" for i in range(n_untreated)],
+        },
+        "CHOICE": {
+            "coeff": sim_config.coefficients_choice,
+            "order": [f"Z{i}" for i in range(n_choice)],
+        },
+        "DIST": {
+            "coeff": sim_config.covariance,
+        },
+        "DETERMINISTIC": False,
+        "AUX": {},
+    }
+
+    return legacy_dict
