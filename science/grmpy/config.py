@@ -21,25 +21,32 @@ from grmpy.core.exceptions import ConfigurationError
 
 # -----------------------------------------------------------------------------
 # Default Configuration
+# Design Decision: FUNCTION + PARAMS pattern matches impact-engine for
+# consistency across the organization's tooling.
 # -----------------------------------------------------------------------------
 
 DEFAULTS: Dict[str, Any] = {
     "ESTIMATION": {
-        "method": "parametric",
-        "optimizer": "BFGS",
-        "max_iterations": 10000,
-        "tolerance": 1e-6,
-        "gridsize": 500,
-        "ps_range": [0.005, 0.995],
-        # Minimum sample size for semiparametric estimation
-        # Design Decision: 100 is conservative based on simulation studies
-        # showing unreliable local polynomial estimates with fewer points
-        "min_sample_size": 100,
+        "FUNCTION": "parametric",
+        "PARAMS": {
+            "optimizer": "BFGS",
+            "max_iterations": 10000,
+            "tolerance": 1e-6,
+            "gridsize": 500,
+            "ps_range": [0.005, 0.995],
+            # Minimum sample size for semiparametric estimation
+            # Design Decision: 100 is conservative based on simulation studies
+            # showing unreliable local polynomial estimates with fewer points
+            "min_sample_size": 100,
+        },
     },
     "SIMULATION": {
-        "agents": 1000,
-        "source": "sim",
-        "output_file": "data.grmpy.pkl",
+        "FUNCTION": "roy_model",
+        "PARAMS": {
+            "agents": 1000,
+            "source": "sim",
+            "output_file": "data.grmpy.pkl",
+        },
     },
 }
 

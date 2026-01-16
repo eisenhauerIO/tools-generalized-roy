@@ -134,7 +134,7 @@ def create_estimator_manager(config_path: str) -> "EstimatorManager":
             "Please add an ESTIMATION section."
         )
 
-    estimator = get_estimator(config.estimation.method)
+    estimator = get_estimator(config.estimation.function)
     return EstimatorManager(estimator, config)
 
 

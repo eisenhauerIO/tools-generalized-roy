@@ -4,6 +4,9 @@ Data contracts for grmpy package.
 Design Decision: Explicit contracts enable consistent data handling across
 modules and provide clear validation at system boundaries.
 
+Design Decision: FUNCTION + PARAMS pattern matches impact-engine for
+consistency across the organization's tooling.
+
 Contracts define:
 - Required and optional fields for data structures
 - Field mappings for external data sources
@@ -119,6 +122,8 @@ class SimulationDataSchema(DataSchema):
 
 # -----------------------------------------------------------------------------
 # Configuration Contracts
+# Design Decision: FUNCTION specifies which implementation to use,
+# PARAMS contains parameters for that implementation.
 # -----------------------------------------------------------------------------
 
 
@@ -128,11 +133,12 @@ class EstimationConfig:
     Configuration contract for estimation operations.
 
     Design Decision: Dataclass provides type safety and validation
-    at configuration load time.
+    at configuration load time. FUNCTION + PARAMS pattern enables
+    data-driven selection of estimation method.
     """
 
-    method: str
-    file: str
+    function: str  # Which estimator to use: "parametric", "semiparametric"
+    file: str = ""
     dependent: str = "Y"
     treatment: str = "D"
     instrument: str = "Z"
@@ -162,11 +168,11 @@ class EstimationConfig:
         """
         from grmpy.core.exceptions import ConfigurationError
 
-        valid_methods = ["parametric", "semiparametric"]
-        if self.method not in valid_methods:
+        valid_functions = ["parametric", "semiparametric"]
+        if self.function not in valid_functions:
             raise ConfigurationError(
-                f"Invalid estimation method: '{self.method}'. "
-                f"Available options: {valid_methods}"
+                f"Invalid estimation FUNCTION: '{self.function}'. "
+                f"Available options: {valid_functions}"
             )
 
         valid_optimizers = ["BFGS", "POWELL", "L-BFGS-B"]
@@ -181,9 +187,13 @@ class EstimationConfig:
 class SimulationConfig:
     """
     Configuration contract for simulation operations.
+
+    Design Decision: FUNCTION + PARAMS pattern enables future
+    extension with different simulation models.
     """
 
-    agents: int
+    function: str  # Which simulator to use: "roy_model"
+    agents: int = 1000
     seed: Optional[int] = None
     source: str = "sim"
     output_file: str = "data.grmpy.pkl"
@@ -196,6 +206,13 @@ class SimulationConfig:
     def validate(self) -> None:
         """Validate simulation configuration."""
         from grmpy.core.exceptions import ConfigurationError
+
+        valid_functions = ["roy_model"]
+        if self.function not in valid_functions:
+            raise ConfigurationError(
+                f"Invalid simulation FUNCTION: '{self.function}'. "
+                f"Available options: {valid_functions}"
+            )
 
         if self.agents <= 0:
             raise ConfigurationError(
@@ -217,6 +234,13 @@ class Config:
         """
         Create Config from dictionary.
 
+        Parses FUNCTION + PARAMS structure:
+            ESTIMATION:
+              FUNCTION: parametric
+              PARAMS:
+                file: data.csv
+                optimizer: BFGS
+
         Args:
             data: Configuration dictionary
 
@@ -228,35 +252,43 @@ class Config:
 
         if "ESTIMATION" in data:
             est_data = data["ESTIMATION"]
+            function = est_data.get("FUNCTION", "parametric")
+            params = est_data.get("PARAMS", {})
+
             estimation = EstimationConfig(
-                method=est_data.get("method", "parametric"),
-                file=est_data.get("file", ""),
-                dependent=est_data.get("dependent", "Y"),
-                treatment=est_data.get("treatment", "D"),
-                instrument=est_data.get("instrument", "Z"),
-                covariates_treated=est_data.get("covariates_treated", []),
-                covariates_untreated=est_data.get("covariates_untreated", []),
-                covariates_choice=est_data.get("covariates_choice", []),
-                optimizer=est_data.get("optimizer", "BFGS"),
-                max_iterations=est_data.get("max_iterations", 10000),
-                tolerance=est_data.get("tolerance", 1e-6),
-                start_values=est_data.get("start_values"),
-                bandwidth=est_data.get("bandwidth"),
-                gridsize=est_data.get("gridsize", 500),
-                ps_range=tuple(est_data.get("ps_range", [0.005, 0.995])),
+                function=function,
+                file=params.get("file", ""),
+                dependent=params.get("dependent", "Y"),
+                treatment=params.get("treatment", "D"),
+                instrument=params.get("instrument", "Z"),
+                covariates_treated=params.get("covariates_treated", []),
+                covariates_untreated=params.get("covariates_untreated", []),
+                covariates_choice=params.get("covariates_choice", []),
+                optimizer=params.get("optimizer", "BFGS"),
+                max_iterations=params.get("max_iterations", 10000),
+                tolerance=params.get("tolerance", 1e-6),
+                start_values=params.get("start_values"),
+                bandwidth=params.get("bandwidth"),
+                gridsize=params.get("gridsize", 500),
+                ps_range=tuple(params.get("ps_range", [0.005, 0.995])),
+                min_sample_size=params.get("min_sample_size", 100),
             )
 
         if "SIMULATION" in data:
             sim_data = data["SIMULATION"]
+            function = sim_data.get("FUNCTION", "roy_model")
+            params = sim_data.get("PARAMS", {})
+
             simulation = SimulationConfig(
-                agents=sim_data.get("agents", 1000),
-                seed=sim_data.get("seed"),
-                source=sim_data.get("source", "sim"),
-                output_file=sim_data.get("output_file", "data.grmpy.pkl"),
-                coefficients_treated=sim_data.get("coefficients_treated", []),
-                coefficients_untreated=sim_data.get("coefficients_untreated", []),
-                coefficients_choice=sim_data.get("coefficients_choice", []),
-                covariance=sim_data.get("covariance", []),
+                function=function,
+                agents=params.get("agents", 1000),
+                seed=params.get("seed"),
+                source=params.get("source", "sim"),
+                output_file=params.get("output_file", "data.grmpy.pkl"),
+                coefficients_treated=params.get("coefficients_treated", []),
+                coefficients_untreated=params.get("coefficients_untreated", []),
+                coefficients_choice=params.get("coefficients_choice", []),
+                covariance=params.get("covariance", []),
             )
 
         return cls(estimation=estimation, simulation=simulation)
