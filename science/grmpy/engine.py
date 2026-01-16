@@ -1,12 +1,9 @@
 """
-Main engine orchestrator for grmpy package.
-
-Design Decision: This module provides the primary public API functions
-that coordinate the complete estimation and simulation workflows.
+Main engine for grmpy package.
 
 Public API:
-- fit(): Main entry point for estimation
-- simulate(): Main entry point for simulation
+- fit(): Estimate MTE from data
+- simulate(): Generate synthetic Roy model data
 - plot_mte(): Visualize marginal treatment effects
 """
 
@@ -21,62 +18,33 @@ from grmpy.config import process_config
 
 def fit(config_path: Union[str, Path]) -> EstimationResult:
     """
-    Main entry point for estimation.
-
-    Orchestrates the complete estimation workflow:
-    1. Load and validate configuration
-    2. Create appropriate estimator
-    3. Load and validate data
-    4. Execute estimation
-    5. Return standardized results
+    Estimate Marginal Treatment Effect from data.
 
     Args:
-        config_path: Path to YAML configuration file
+        config_path: Path to YAML configuration file.
 
     Returns:
-        EstimationResult with MTE and related quantities
-
-    Raises:
-        ConfigurationError: If configuration is invalid
-        DataValidationError: If data fails validation
-        EstimationError: If estimation fails
+        EstimationResult with MTE and coefficients.
 
     Example:
         >>> result = grmpy.fit("analysis.grmpy.yml")
         >>> print(result.mte)
     """
-    from grmpy.estimators.factory import create_estimator_manager
+    from grmpy.estimators import fit as run_estimation
 
-    # Create configured manager
-    manager = create_estimator_manager(str(config_path))
-    manager.connect()
-
-    # Execute estimation
-    result = manager.fit()
-
-    return result
+    config = process_config(str(config_path))
+    return run_estimation(config)
 
 
 def simulate(config_path: Union[str, Path]) -> pd.DataFrame:
     """
-    Main entry point for simulation.
-
-    Generates synthetic data according to the generalized Roy model
-    with parameters specified in the configuration file.
+    Generate synthetic data according to the generalized Roy model.
 
     Args:
-        config_path: Path to YAML configuration file
+        config_path: Path to YAML configuration file.
 
     Returns:
-        DataFrame with simulated data including:
-        - Y: Observed outcome
-        - Y_1, Y_0: Potential outcomes
-        - D: Treatment indicator
-        - U_1, U_0, V: Unobservables
-
-    Raises:
-        ConfigurationError: If configuration is invalid
-        SimulationError: If simulation fails
+        DataFrame with simulated data (Y, Y_1, Y_0, D, U_1, U_0, V).
 
     Example:
         >>> data = grmpy.simulate("simulation.grmpy.yml")
@@ -97,12 +65,9 @@ def plot_mte(
     """
     Plot Marginal Treatment Effect curve.
 
-    Visualizes the MTE across the distribution of unobserved resistance
-    with optional confidence intervals.
-
     Args:
         result: EstimationResult from fit()
-        config_path: Optional path to config for additional plot settings
+        config_path: Optional path to config for plot settings
         output_file: Optional path to save figure
         show_confidence: Whether to show confidence bands
 

@@ -25,23 +25,11 @@ For more information, see: https://grmpy.readthedocs.io
 
 __version__ = "2.0.0"
 
-# Public API
 from grmpy.engine import fit, plot_mte, simulate
-
-# Estimator registration for extensibility
-from grmpy.estimators.adapter_parametric import ParametricEstimator
-from grmpy.estimators.adapter_semiparametric import SemiparametricEstimator
-from grmpy.estimators.factory import register_estimator
-
-# Auto-register built-in estimators
-register_estimator("parametric", ParametricEstimator)
-register_estimator("semiparametric", SemiparametricEstimator)
 
 __all__ = [
     "fit",
     "simulate",
     "plot_mte",
     "__version__",
-    # For extension
-    "register_estimator",
 ]
