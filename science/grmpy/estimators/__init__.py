@@ -5,15 +5,13 @@ Provides parametric and semiparametric estimators for the
 Marginal Treatment Effect in the generalized Roy model.
 """
 
-from typing import Optional
-
 import pandas as pd
 
 from grmpy.core.contracts import Config, EstimationResult
 from grmpy.core.exceptions import ConfigurationError
 
 
-def fit(config: Config, data: Optional[pd.DataFrame] = None) -> EstimationResult:
+def estimate(config: Config, data: pd.DataFrame) -> EstimationResult:
     """
     Estimate MTE using method specified in config.
 
@@ -22,7 +20,7 @@ def fit(config: Config, data: Optional[pd.DataFrame] = None) -> EstimationResult
 
     Args:
         config: Configuration with ESTIMATION.FUNCTION set.
-        data: Optional DataFrame. If not provided, loads from config.
+        data: DataFrame with outcome, treatment, and covariates.
 
     Returns:
         EstimationResult with MTE and coefficients.
@@ -36,12 +34,12 @@ def fit(config: Config, data: Optional[pd.DataFrame] = None) -> EstimationResult
     function = config.estimation.function
 
     if function == "parametric":
-        from grmpy.estimators.parametric import fit as fit_parametric
-        return fit_parametric(config, data)
+        from grmpy.estimators.parametric import estimate as estimate_parametric
+        return estimate_parametric(config, data)
 
     elif function == "semiparametric":
-        from grmpy.estimators.semiparametric import fit as fit_semiparametric
-        return fit_semiparametric(config, data)
+        from grmpy.estimators.semiparametric import estimate as estimate_semiparametric
+        return estimate_semiparametric(config, data)
 
     else:
         raise ConfigurationError(
@@ -50,4 +48,4 @@ def fit(config: Config, data: Optional[pd.DataFrame] = None) -> EstimationResult
         )
 
 
-__all__ = ["fit"]
+__all__ = ["estimate"]

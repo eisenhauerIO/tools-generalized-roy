@@ -2,63 +2,61 @@
 Main engine for grmpy package.
 
 Public API:
-- fit(): Estimate MTE from data
+- estimate(): Estimate MTE from data
 - simulate(): Generate synthetic Roy model data
-- plot_mte(): Visualize marginal treatment effects
+- plot(): Visualize marginal treatment effects
 """
 
-from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import pandas as pd
 
-from grmpy.core.contracts import EstimationResult
-from grmpy.config import process_config
+from grmpy.core.contracts import Config, EstimationResult
 
 
-def fit(config_path: Union[str, Path]) -> EstimationResult:
+def estimate(config: Config, data: pd.DataFrame) -> EstimationResult:
     """
     Estimate Marginal Treatment Effect from data.
 
     Args:
-        config_path: Path to YAML configuration file.
+        config: Configuration object with estimation settings.
+        data: DataFrame with outcome, treatment, and covariates.
 
     Returns:
         EstimationResult with MTE and coefficients.
 
     Example:
-        >>> result = grmpy.fit("analysis.grmpy.yml")
+        >>> config = grmpy.process_config("analysis.yml")
+        >>> result = grmpy.estimate(config, data)
         >>> print(result.mte)
     """
-    from grmpy.estimators import fit as run_estimation
+    from grmpy.estimators import estimate as run_estimation
 
-    config = process_config(str(config_path))
-    return run_estimation(config)
+    return run_estimation(config, data)
 
 
-def simulate(config_path: Union[str, Path]) -> pd.DataFrame:
+def simulate(config: Config) -> pd.DataFrame:
     """
     Generate synthetic data according to the generalized Roy model.
 
     Args:
-        config_path: Path to YAML configuration file.
+        config: Configuration object with simulation settings.
 
     Returns:
         DataFrame with simulated data (Y, Y_1, Y_0, D, U_1, U_0, V).
 
     Example:
-        >>> data = grmpy.simulate("simulation.grmpy.yml")
+        >>> config = grmpy.process_config("simulation.yml")
+        >>> data = grmpy.simulate(config)
         >>> print(data.head())
     """
     from grmpy.simulators import simulate as run_simulation
 
-    config = process_config(str(config_path))
     return run_simulation(config)
 
 
-def plot_mte(
+def plot(
     result: EstimationResult,
-    config_path: Optional[Union[str, Path]] = None,
     output_file: Optional[str] = None,
     show_confidence: bool = True,
 ) -> None:
@@ -66,20 +64,18 @@ def plot_mte(
     Plot Marginal Treatment Effect curve.
 
     Args:
-        result: EstimationResult from fit()
-        config_path: Optional path to config for plot settings
+        result: EstimationResult from estimate()
         output_file: Optional path to save figure
         show_confidence: Whether to show confidence bands
 
     Example:
-        >>> result = grmpy.fit("analysis.grmpy.yml")
-        >>> grmpy.plot_mte(result, output_file="mte_plot.png")
+        >>> result = grmpy.estimate(config, data)
+        >>> grmpy.plot(result, output_file="mte.png")
     """
     from grmpy.visualization.mte_plot import plot_mte_curve
 
     plot_mte_curve(
         result=result,
-        config_path=config_path,
         output_file=output_file,
         show_confidence=show_confidence,
     )

@@ -1,22 +1,16 @@
 """
 MTE visualization module.
-
-Design Decision: Separates plotting logic from estimation to enable
-independent testing and customization of visualizations.
 """
 
-from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 from grmpy.core.contracts import EstimationResult
 
 
 def plot_mte_curve(
     result: EstimationResult,
-    config_path: Optional[Union[str, Path]] = None,
     output_file: Optional[str] = None,
     show_confidence: bool = True,
     figsize: tuple = (10, 6),
@@ -26,7 +20,6 @@ def plot_mte_curve(
 
     Args:
         result: EstimationResult containing MTE data
-        config_path: Optional config for additional settings
         output_file: Optional path to save figure
         show_confidence: Whether to show min/max bands
         figsize: Figure size in inches
@@ -39,7 +32,7 @@ def plot_mte_curve(
     # Main MTE curve
     ax.plot(quantiles, mte, "b-", linewidth=2, label="MTE")
 
-    # Confidence/variation bands if available in metadata
+    # Confidence/variation bands if available
     if show_confidence and "mte_min" in result.metadata and "mte_max" in result.metadata:
         mte_min = result.metadata["mte_min"]
         mte_max = result.metadata["mte_max"]
@@ -62,7 +55,6 @@ def plot_mte_curve(
 
     plt.tight_layout()
 
-    # Save or show
     if output_file:
         plt.savefig(output_file, dpi=150, bbox_inches="tight")
         plt.close()

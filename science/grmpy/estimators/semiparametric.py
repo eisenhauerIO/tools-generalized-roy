@@ -14,13 +14,13 @@ from grmpy.core.contracts import Config, EstimationConfig, EstimationResult
 from grmpy.core.exceptions import DataValidationError, EstimationError
 
 
-def fit(config: Config, data: pd.DataFrame = None) -> EstimationResult:
+def estimate(config: Config, data: pd.DataFrame) -> EstimationResult:
     """
     Estimate MTE using semiparametric LIV method.
 
     Args:
         config: Configuration object with estimation settings.
-        data: Optional DataFrame. If not provided, loads from config.file.
+        data: DataFrame with outcome, treatment, and covariates.
 
     Returns:
         EstimationResult with MTE and coefficients.
@@ -32,10 +32,6 @@ def fit(config: Config, data: pd.DataFrame = None) -> EstimationResult:
     est_config = config.estimation
     if est_config is None:
         raise EstimationError("No estimation configuration provided")
-
-    # Load data if not provided
-    if data is None:
-        data = _load_data(est_config.file)
 
     # Validate data
     _validate_data(data, est_config)
@@ -76,26 +72,6 @@ def fit(config: Config, data: pd.DataFrame = None) -> EstimationResult:
             "gridsize": est_config.gridsize,
         },
     )
-
-
-def _load_data(file_path: str) -> pd.DataFrame:
-    """Load data from file path."""
-    if not file_path:
-        raise EstimationError(
-            "No data file specified. Either provide data directly or set 'file' in PARAMS."
-        )
-
-    try:
-        if file_path.endswith(".pkl"):
-            return pd.read_pickle(file_path)
-        elif file_path.endswith(".csv"):
-            return pd.read_csv(file_path)
-        elif file_path.endswith(".dta"):
-            return pd.read_stata(file_path)
-        else:
-            return pd.read_pickle(file_path)
-    except Exception as e:
-        raise EstimationError(f"Failed to load data from '{file_path}': {e}") from e
 
 
 def _validate_data(data: pd.DataFrame, config: EstimationConfig) -> None:
