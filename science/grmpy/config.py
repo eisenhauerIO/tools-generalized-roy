@@ -16,7 +16,7 @@ from typing import Any, Dict, Optional, Union
 import yaml
 
 from grmpy.core.contracts import Config
-from grmpy.core.exceptions import ConfigurationError
+from grmpy.core.exceptions import GrmpyError
 
 
 # -----------------------------------------------------------------------------
@@ -76,7 +76,7 @@ def process_config(path: Union[str, Path]) -> Config:
 
     # Validate file exists
     if not path.exists():
-        raise ConfigurationError(
+        raise GrmpyError(
             f"Configuration file not found: '{path}'. "
             f"Please provide a valid .yml or .yaml file."
         )
@@ -110,7 +110,7 @@ def load_raw_config(path: Union[str, Path]) -> Dict[str, Any]:
     """
     path = Path(path)
     if not path.exists():
-        raise ConfigurationError(f"Configuration file not found: '{path}'")
+        raise GrmpyError(f"Configuration file not found: '{path}'")
     return _deep_merge(DEFAULTS.copy(), _load_yaml(path))
 
 
@@ -137,7 +137,7 @@ def _load_yaml(path: Path) -> Dict[str, Any]:
             content = yaml.safe_load(f)
             return content if content is not None else {}
     except yaml.YAMLError as e:
-        raise ConfigurationError(
+        raise GrmpyError(
             f"Failed to parse YAML configuration: {path}\n"
             f"Error: {e}"
         )
@@ -185,7 +185,7 @@ def _validate_config(config: Config) -> None:
         if config.estimation.file:
             data_path = Path(config.estimation.file)
             if not data_path.exists():
-                raise ConfigurationError(
+                raise GrmpyError(
                     f"Estimation data file not found: '{data_path}'. "
                     f"Please provide a valid data file path."
                 )

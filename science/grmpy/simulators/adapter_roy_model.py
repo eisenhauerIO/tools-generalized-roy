@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from grmpy.core.contracts import Config, SimulationConfig
-from grmpy.core.exceptions import ConfigurationError, SimulationError
+from grmpy.core.exceptions import GrmpyError
 
 
 def simulate(config: Config) -> pd.DataFrame:
@@ -40,7 +40,7 @@ def simulate(config: Config) -> pd.DataFrame:
         SimulationError: If legacy module import fails or simulation errors.
     """
     if config.simulation is None:
-        raise ConfigurationError(
+        raise GrmpyError(
             "No simulation configuration found in config file. "
             "Please add a SIMULATION section."
         )
@@ -49,7 +49,7 @@ def simulate(config: Config) -> pd.DataFrame:
 
     # Validate basic requirements
     if sim_config.agents <= 0:
-        raise ConfigurationError("Number of agents must be positive")
+        raise GrmpyError("Number of agents must be positive")
 
     # Set seed if provided for reproducibility
     if sim_config.seed is not None:
@@ -64,7 +64,7 @@ def simulate(config: Config) -> pd.DataFrame:
             write_output,
         )
     except ImportError as e:
-        raise SimulationError(f"Failed to import legacy simulation module: {e}")
+        raise GrmpyError(f"Failed to import legacy simulation module: {e}")
 
     # Build legacy dict format for compatibility
     legacy_dict = _build_legacy_dict(sim_config)

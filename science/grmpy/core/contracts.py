@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from grmpy.core.exceptions import DataValidationError
+from grmpy.core.exceptions import GrmpyError
 
 
 # -----------------------------------------------------------------------------
@@ -52,7 +52,7 @@ class DataSchema:
         """
         missing = set(self.required_fields) - set(df.columns)
         if missing:
-            raise DataValidationError(
+            raise GrmpyError(
                 f"Missing required columns: {sorted(missing)}. "
                 f"Available columns: {sorted(df.columns)}"
             )
@@ -166,18 +166,18 @@ class EstimationConfig:
         Raises:
             ConfigurationError: If configuration is invalid
         """
-        from grmpy.core.exceptions import ConfigurationError
+        from grmpy.core.exceptions import GrmpyError
 
         valid_functions = ["parametric", "semiparametric"]
         if self.function not in valid_functions:
-            raise ConfigurationError(
+            raise GrmpyError(
                 f"Invalid estimation FUNCTION: '{self.function}'. "
                 f"Available options: {valid_functions}"
             )
 
         valid_optimizers = ["BFGS", "POWELL", "L-BFGS-B"]
         if self.optimizer not in valid_optimizers:
-            raise ConfigurationError(
+            raise GrmpyError(
                 f"Invalid optimizer: '{self.optimizer}'. "
                 f"Available options: {valid_optimizers}"
             )
@@ -205,17 +205,17 @@ class SimulationConfig:
 
     def validate(self) -> None:
         """Validate simulation configuration."""
-        from grmpy.core.exceptions import ConfigurationError
+        from grmpy.core.exceptions import GrmpyError
 
         valid_functions = ["roy_model"]
         if self.function not in valid_functions:
-            raise ConfigurationError(
+            raise GrmpyError(
                 f"Invalid simulation FUNCTION: '{self.function}'. "
                 f"Available options: {valid_functions}"
             )
 
         if self.agents <= 0:
-            raise ConfigurationError(
+            raise GrmpyError(
                 f"Number of agents must be positive, got: {self.agents}"
             )
 

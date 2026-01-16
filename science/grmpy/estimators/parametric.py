@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from grmpy.core.contracts import Config, EstimationConfig, EstimationResult
-from grmpy.core.exceptions import DataValidationError, EstimationError
+from grmpy.core.exceptions import GrmpyError
 
 
 def estimate(config: Config, data: pd.DataFrame) -> EstimationResult:
@@ -31,7 +31,7 @@ def estimate(config: Config, data: pd.DataFrame) -> EstimationResult:
     """
     est_config = config.estimation
     if est_config is None:
-        raise EstimationError("No estimation configuration provided")
+        raise GrmpyError("No estimation configuration provided")
 
     # Validate data
     _validate_data(data, est_config)
@@ -40,7 +40,7 @@ def estimate(config: Config, data: pd.DataFrame) -> EstimationResult:
     try:
         from grmpy.estimate.estimate_par import par_fit
     except ImportError as e:
-        raise EstimationError(f"Failed to import legacy estimation module: {e}")
+        raise GrmpyError(f"Failed to import legacy estimation module: {e}")
 
     # Build legacy dict format and run estimation
     legacy_dict = _build_legacy_dict(est_config, data)
@@ -68,7 +68,7 @@ def _validate_data(data: pd.DataFrame, config: EstimationConfig) -> None:
     required = [config.dependent, config.treatment]
     missing = set(required) - set(data.columns)
     if missing:
-        raise DataValidationError(
+        raise GrmpyError(
             f"Missing required columns: {sorted(missing)}. "
             f"Available columns: {sorted(data.columns)}"
         )
@@ -76,7 +76,7 @@ def _validate_data(data: pd.DataFrame, config: EstimationConfig) -> None:
     # Check treatment is binary
     unique_vals = data[config.treatment].unique()
     if not set(unique_vals).issubset({0, 1}):
-        raise DataValidationError(
+        raise GrmpyError(
             f"Treatment column '{config.treatment}' must be binary (0/1). "
             f"Found values: {sorted(unique_vals)}"
         )
