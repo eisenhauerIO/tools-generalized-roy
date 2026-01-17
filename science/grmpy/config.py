@@ -6,49 +6,40 @@ consistent validation and default handling across all operations.
 
 This module provides:
 - Single process_config() function as public API
-- Deep merge of user config with defaults
+- Deep merge of user config with defaults from YAML
 - Validation at load time with context-rich errors
+
+Design Decision: Defaults stored in config_defaults.yaml per coding standards,
+enabling easy schema extraction and user-friendly reference.
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Union
 
 import yaml
 
 from grmpy.core.contracts import Config
 from grmpy.core.exceptions import GrmpyError
 
-
 # -----------------------------------------------------------------------------
 # Default Configuration
-# Design Decision: FUNCTION + PARAMS pattern matches impact-engine for
-# consistency across the organization's tooling.
+# Design Decision: Defaults loaded from YAML file for consistency with
+# coding standards and to enable schema extraction.
 # -----------------------------------------------------------------------------
 
-DEFAULTS: Dict[str, Any] = {
-    "ESTIMATION": {
-        "FUNCTION": "parametric",
-        "PARAMS": {
-            "optimizer": "BFGS",
-            "max_iterations": 10000,
-            "tolerance": 1e-6,
-            "gridsize": 500,
-            "ps_range": [0.005, 0.995],
-            # Minimum sample size for semiparametric estimation
-            # Design Decision: 100 is conservative based on simulation studies
-            # showing unreliable local polynomial estimates with fewer points
-            "min_sample_size": 100,
-        },
-    },
-    "SIMULATION": {
-        "FUNCTION": "roy_model",
-        "PARAMS": {
-            "agents": 1000,
-            "source": "sim",
-            "output_file": "data.grmpy.pkl",
-        },
-    },
-}
+_DEFAULTS_FILE = Path(__file__).parent / "config_defaults.yaml"
+
+
+def _load_defaults() -> Dict[str, Any]:
+    """Load default configuration from YAML file."""
+    if not _DEFAULTS_FILE.exists():
+        raise GrmpyError(f"Default configuration file not found: {_DEFAULTS_FILE}")
+    with open(_DEFAULTS_FILE, "r") as f:
+        return yaml.safe_load(f) or {}
+
+
+# Load defaults at module import time
+DEFAULTS: Dict[str, Any] = _load_defaults()
 
 
 # -----------------------------------------------------------------------------
@@ -76,10 +67,7 @@ def process_config(path: Union[str, Path]) -> Config:
 
     # Validate file exists
     if not path.exists():
-        raise GrmpyError(
-            f"Configuration file not found: '{path}'. "
-            f"Please provide a valid .yml or .yaml file."
-        )
+        raise GrmpyError(f"Configuration file not found: '{path}'. " f"Please provide a valid .yml or .yaml file.")
 
     # Load user configuration
     user_config = _load_yaml(path)
@@ -137,10 +125,7 @@ def _load_yaml(path: Path) -> Dict[str, Any]:
             content = yaml.safe_load(f)
             return content if content is not None else {}
     except yaml.YAMLError as e:
-        raise GrmpyError(
-            f"Failed to parse YAML configuration: {path}\n"
-            f"Error: {e}"
-        )
+        raise GrmpyError(f"Failed to parse YAML configuration: {path}\n" f"Error: {e}")
 
 
 def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
@@ -186,8 +171,7 @@ def _validate_config(config: Config) -> None:
             data_path = Path(config.estimation.file)
             if not data_path.exists():
                 raise GrmpyError(
-                    f"Estimation data file not found: '{data_path}'. "
-                    f"Please provide a valid data file path."
+                    f"Estimation data file not found: '{data_path}'. " f"Please provide a valid data file path."
                 )
 
     if config.simulation is not None:

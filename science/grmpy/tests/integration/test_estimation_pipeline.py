@@ -91,7 +91,7 @@ class TestSimulationPipeline:
 
     def test_simulate_basic_workflow(self):
         """simulate() generates data with valid config."""
-        from grmpy.core.contracts import SimulationConfig
+        from grmpy.core.contracts import SimulationConfig, SimulationResult
         from grmpy.simulators import simulate
 
         config = Config(
@@ -106,10 +106,8 @@ class TestSimulationPipeline:
             )
         )
 
-        try:
-            result = simulate(config)
-            assert isinstance(result, pd.DataFrame)
-            assert len(result) == 50
-        except GrmpyError as e:
-            # Expected if legacy modules aren't available
-            pytest.skip(f"Legacy simulation module not available: {e}")
+        result = simulate(config)
+        assert isinstance(result, SimulationResult)
+        assert isinstance(result.data, pd.DataFrame)
+        assert len(result.data) == 50
+        assert result.metadata["function"] == "roy_model"

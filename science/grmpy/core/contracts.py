@@ -21,7 +21,6 @@ import pandas as pd
 
 from grmpy.core.exceptions import GrmpyError
 
-
 # -----------------------------------------------------------------------------
 # Data Schemas
 # -----------------------------------------------------------------------------
@@ -53,8 +52,7 @@ class DataSchema:
         missing = set(self.required_fields) - set(df.columns)
         if missing:
             raise GrmpyError(
-                f"Missing required columns: {sorted(missing)}. "
-                f"Available columns: {sorted(df.columns)}"
+                f"Missing required columns: {sorted(missing)}. " f"Available columns: {sorted(df.columns)}"
             )
 
     def from_external(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -101,9 +99,7 @@ class EstimationDataSchema(DataSchema):
     - X: Covariates
     """
 
-    required_fields: List[str] = field(
-        default_factory=lambda: ["Y", "D", "Z"]
-    )
+    required_fields: List[str] = field(default_factory=lambda: ["Y", "D", "Z"])
     optional_fields: List[str] = field(default_factory=lambda: ["X"])
 
 
@@ -115,9 +111,7 @@ class SimulationDataSchema(DataSchema):
     Contains both observed and latent variables for analysis.
     """
 
-    required_fields: List[str] = field(
-        default_factory=lambda: ["Y", "Y_1", "Y_0", "D", "U_1", "U_0", "V"]
-    )
+    required_fields: List[str] = field(default_factory=lambda: ["Y", "Y_1", "Y_0", "D", "U_1", "U_0", "V"])
 
 
 # -----------------------------------------------------------------------------
@@ -163,24 +157,25 @@ class EstimationConfig:
         """
         Validate configuration with context-rich errors.
 
+        Design Decision: Dynamically imports AVAILABLE_FUNCTIONS from estimators
+        module to derive valid options rather than hard-coding.
+
         Raises:
-            ConfigurationError: If configuration is invalid
+            GrmpyError: If configuration is invalid.
         """
         from grmpy.core.exceptions import GrmpyError
 
-        valid_functions = ["parametric", "semiparametric"]
-        if self.function not in valid_functions:
+        # Lazy import to avoid circular dependency
+        from grmpy.estimators import AVAILABLE_FUNCTIONS
+
+        if self.function not in AVAILABLE_FUNCTIONS:
             raise GrmpyError(
-                f"Invalid estimation FUNCTION: '{self.function}'. "
-                f"Available options: {valid_functions}"
+                f"Invalid estimation FUNCTION: '{self.function}'. " f"Available options: {AVAILABLE_FUNCTIONS}"
             )
 
         valid_optimizers = ["BFGS", "POWELL", "L-BFGS-B"]
         if self.optimizer not in valid_optimizers:
-            raise GrmpyError(
-                f"Invalid optimizer: '{self.optimizer}'. "
-                f"Available options: {valid_optimizers}"
-            )
+            raise GrmpyError(f"Invalid optimizer: '{self.optimizer}'. " f"Available options: {valid_optimizers}")
 
 
 @dataclass
@@ -204,20 +199,27 @@ class SimulationConfig:
     covariance: List[List[float]] = field(default_factory=list)
 
     def validate(self) -> None:
-        """Validate simulation configuration."""
+        """
+        Validate simulation configuration.
+
+        Design Decision: Dynamically imports AVAILABLE_FUNCTIONS from simulators
+        module to derive valid options rather than hard-coding.
+
+        Raises:
+            GrmpyError: If configuration is invalid.
+        """
         from grmpy.core.exceptions import GrmpyError
 
-        valid_functions = ["roy_model"]
-        if self.function not in valid_functions:
+        # Lazy import to avoid circular dependency
+        from grmpy.simulators import AVAILABLE_FUNCTIONS
+
+        if self.function not in AVAILABLE_FUNCTIONS:
             raise GrmpyError(
-                f"Invalid simulation FUNCTION: '{self.function}'. "
-                f"Available options: {valid_functions}"
+                f"Invalid simulation FUNCTION: '{self.function}'. " f"Available options: {AVAILABLE_FUNCTIONS}"
             )
 
         if self.agents <= 0:
-            raise GrmpyError(
-                f"Number of agents must be positive, got: {self.agents}"
-            )
+            raise GrmpyError(f"Number of agents must be positive, got: {self.agents}")
 
 
 @dataclass
@@ -324,10 +326,7 @@ class EstimationResult:
             "mte_x": self.mte_x.tolist() if isinstance(self.mte_x, np.ndarray) else self.mte_x,
             "mte_u": self.mte_u.tolist() if isinstance(self.mte_u, np.ndarray) else self.mte_u,
             "quantiles": self.quantiles.tolist() if isinstance(self.quantiles, np.ndarray) else self.quantiles,
-            "coefficients": {
-                k: v.tolist() if isinstance(v, np.ndarray) else v
-                for k, v in self.coefficients.items()
-            },
+            "coefficients": {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in self.coefficients.items()},
             "metadata": self.metadata,
         }
 

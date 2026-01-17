@@ -1,0 +1,26 @@
+# Default configuration values for grmpy package.
+#
+# Design Decision: Storing defaults in YAML enables:
+# - Easy extraction of parameter schemas
+# - User-friendly reference for available options
+# - Consistent configuration format throughout
+
+ESTIMATION:
+  FUNCTION: parametric
+  PARAMS:
+    optimizer: BFGS
+    max_iterations: 10000
+    tolerance: 1.0e-6
+    gridsize: 500
+    ps_range: [0.005, 0.995]
+    # Minimum sample size for semiparametric estimation.
+    # Design Decision: 100 is conservative based on simulation studies
+    # showing unreliable local polynomial estimates with fewer points.
+    min_sample_size: 100
+
+SIMULATION:
+  FUNCTION: roy_model
+  PARAMS:
+    agents: 1000
+    source: sim
+    output_file: data.grmpy.pkl

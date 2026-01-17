@@ -48,12 +48,11 @@ dev = [
 # -----------------------------------------------------------------------------
 
 [tool.hatch.build.targets.wheel]
-packages = ["science/grmpy", "grmpy"]
+packages = ["science/grmpy"]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "/science",
-    "/grmpy",
     "/docs",
 ]
 
@@ -65,16 +64,13 @@ include = [
 features = ["dev"]
 
 [tool.hatch.envs.default.scripts]
-# Legacy tests (old structure)
-test-legacy = "python -m pytest grmpy/test -v"
-# New tests (new structure)
 test = "python -m pytest science/grmpy/tests -v"
 build = "sphinx-build -b html docs/source docs/build/html"
 serve = "python -m http.server -d docs/build/html 8000"
 clean = "rm -rf docs/build"
 notebooks = "jupyter nbconvert --to notebook --execute --inplace docs/source/**/*.ipynb"
-lint = "ruff check science/grmpy grmpy"
-format = "ruff format science/grmpy grmpy"
+lint = "ruff check science/grmpy"
+format = "ruff format science/grmpy"
 
 # Test environment with specific scripts
 [tool.hatch.envs.test]
@@ -109,7 +105,7 @@ known-first-party = ["grmpy"]
 # -----------------------------------------------------------------------------
 
 [tool.pytest.ini_options]
-testpaths = ["science/grmpy/tests", "grmpy/test"]
+testpaths = ["science/grmpy/tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

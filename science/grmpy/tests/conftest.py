@@ -84,12 +84,16 @@ def deterministic_seed():
 @pytest.fixture
 def sample_estimation_data(seeded_rng) -> pd.DataFrame:
     """
-    Generate minimal valid estimation dataset.
+    Generate valid estimation dataset.
+
+    Design Decision: Sample size of 500 ensures compatibility with
+    semiparametric estimation which requires larger samples for loess
+    regression stability.
 
     Returns:
-        DataFrame with Y, D, Z columns meeting schema requirements
+        DataFrame with Y, D, Z columns meeting schema requirements.
     """
-    n = 100
+    n = 500
     z = seeded_rng.normal(0, 1, n)
     d = (z + seeded_rng.normal(0, 0.5, n) > 0).astype(int)
     y = 1.0 + 0.5 * d + seeded_rng.normal(0, 1, n)
