@@ -1,0 +1,18 @@
+---
+SIMULATION:
+    FUNCTION: roy_model
+    PARAMS:
+        agents: 1000
+        seed: 42
+        coefficients_treated: [1.0, 0.5]
+        coefficients_untreated: [0.5, 0.3]
+        coefficients_choice: [0.0, 1.0]
+        covariance:
+            - [1.0, 0.5, 0.0]
+            - [0.5, 1.0, 0.0]
+            - [0.0, 0.0, 1.0]
+
+ESTIMATION:
+    FUNCTION: parametric
+    PARAMS:
+        file: ""

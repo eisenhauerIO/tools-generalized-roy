@@ -13,6 +13,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "myst_parser",
+    "nbsphinx",
 ]
 
 # Show TODO items locally, hide in production builds
@@ -52,3 +53,7 @@ mathjax3_config = {
         "processEscapes": True,
     },
 }
+
+# nbsphinx settings: don't execute notebooks during docs build
+nbsphinx_execute = "never"
+nbsphinx_allow_errors = True

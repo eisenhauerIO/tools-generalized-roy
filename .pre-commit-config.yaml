@@ -13,3 +13,9 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: nbmake
+        name: nbmake (notebook execution)
+        entry: hatch run pytest --nbmake
+        language: system
+        types: [jupyter]
+        pass_filenames: true
