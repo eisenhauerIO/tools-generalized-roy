@@ -6,11 +6,6 @@ Estimates MTE via local polynomial regression.
 
 Design Decision: All estimation logic is self-contained in this module,
 eliminating dependencies on the legacy grmpy package.
-
-Note: The unobserved component of the MTE requires local polynomial regression
-with derivative estimation. This uses the 'kernreg' package if available.
-For environments where kernreg is not available, an alternative implementation
-using scipy is provided but may be less accurate.
 """
 
 from typing import Any, Dict, List, Tuple
@@ -18,20 +13,11 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
-from scipy.interpolate import UnivariateSpline
 from skmisc.loess import loess
 
 from grmpy.core.contracts import Config, EstimationConfig, EstimationResult
 from grmpy.core.exceptions import GrmpyError
-
-# Try to import kernreg for optimal local polynomial regression
-try:
-    import kernreg as kr
-
-    KERNREG_AVAILABLE = True
-except ImportError:
-    kr = None
-    KERNREG_AVAILABLE = False
+from grmpy.utils.kernreg import locpoly
 
 
 def estimate(config: Config, data: pd.DataFrame) -> EstimationResult:
@@ -77,7 +63,6 @@ def estimate(config: Config, data: pd.DataFrame) -> EstimationResult:
         },
         metadata={
             "function": "semiparametric",
-            "kernreg_available": KERNREG_AVAILABLE,
             "bandwidth": est_config.bandwidth,
             "gridsize": est_config.gridsize,
         },
@@ -432,50 +417,16 @@ def _mte_unobserved(
     Y_tilde = Y_arr - np.dot(X_arr, b0) - np.dot(Xp_arr, b1_b0)
 
     # Estimate mte_u via local polynomial regression with derivative
-    if KERNREG_AVAILABLE:
-        # Use kernreg for optimal results
-        rslt_locpoly = kr.locpoly(
-            x=prop_score_arr,
-            y=Y_tilde,
-            derivative=1,
-            degree=2,
-            bandwidth=bandwidth,
-            gridsize=gridsize,
-            a=startgrid,
-            b=endgrid,
-        )
-        mte_u = rslt_locpoly["curvest"]
-    else:
-        # Fallback: Use scipy UnivariateSpline for derivative estimation
-        # Sort by propensity score for spline fitting
-        sort_idx = np.argsort(prop_score_arr)
-        p_sorted = prop_score_arr[sort_idx]
-        y_sorted = Y_tilde[sort_idx]
-
-        # Fit smoothing spline
-        try:
-            spline = UnivariateSpline(p_sorted, y_sorted, s=len(y_sorted) * bandwidth)
-            # Evaluate derivative on grid
-            grid = np.linspace(startgrid, endgrid, gridsize)
-            mte_u = spline.derivative()(grid)
-        except Exception:
-            # If spline fails, use numerical differentiation on smoothed values
-            grid = np.linspace(startgrid, endgrid, gridsize)
-            smoothed = _lowess_smooth(prop_score_arr, Y_tilde, grid, bandwidth)
-            mte_u = np.gradient(smoothed, grid)
+    rslt_locpoly = locpoly(
+        x=prop_score_arr,
+        y=Y_tilde,
+        derivative=1,
+        degree=2,
+        bandwidth=bandwidth,
+        gridsize=gridsize,
+        a=startgrid,
+        b=endgrid,
+    )
+    mte_u = rslt_locpoly["curvest"]
 
     return mte_u
-
-
-def _lowess_smooth(x: np.ndarray, y: np.ndarray, grid: np.ndarray, bandwidth: float) -> np.ndarray:
-    """Simple lowess smoothing for fallback."""
-    from statsmodels.nonparametric.smoothers_lowess import lowess
-
-    smoothed = lowess(y, x, frac=bandwidth, return_sorted=False)
-
-    # Interpolate to grid
-    sort_idx = np.argsort(x)
-    x_sorted = x[sort_idx]
-    smoothed_sorted = smoothed[sort_idx]
-
-    return np.interp(grid, x_sorted, smoothed_sorted)
