@@ -7,9 +7,15 @@ Tests end-to-end pipeline from configuration to results.
 import pandas as pd
 import pytest
 
-from grmpy.core.contracts import Config, EstimationConfig, EstimationResult
+import grmpy
+from grmpy.core.contracts import (
+    Config,
+    EstimationConfig,
+    EstimationResult,
+    SimulationConfig,
+    SimulationResult,
+)
 from grmpy.core.exceptions import GrmpyError
-from grmpy.estimators import estimate
 
 
 @pytest.mark.integration
@@ -21,7 +27,7 @@ class TestEstimationPipeline:
         config = Config(estimation=None)
 
         with pytest.raises(GrmpyError) as exc_info:
-            estimate(config, sample_estimation_data)
+            grmpy.estimate(config, sample_estimation_data)
 
         assert "ESTIMATION" in str(exc_info.value)
 
@@ -35,7 +41,7 @@ class TestEstimationPipeline:
         )
 
         with pytest.raises(GrmpyError) as exc_info:
-            estimate(config, sample_estimation_data)
+            grmpy.estimate(config, sample_estimation_data)
 
         assert "unknown_function" in str(exc_info.value)
 
@@ -48,14 +54,8 @@ class TestEstimationPipeline:
             )
         )
 
-        # This will fail if parametric module isn't properly configured,
-        # but validates the dispatch mechanism works
-        try:
-            result = estimate(config, sample_estimation_data)
-            assert isinstance(result, EstimationResult)
-        except GrmpyError as e:
-            # Expected if legacy modules aren't available
-            pytest.skip(f"Legacy parametric module not available: {e}")
+        result = grmpy.estimate(config, sample_estimation_data)
+        assert isinstance(result, EstimationResult)
 
     def test_estimate_dispatches_semiparametric(self, sample_estimation_data):
         """estimate() dispatches to semiparametric estimator."""
@@ -66,12 +66,8 @@ class TestEstimationPipeline:
             )
         )
 
-        try:
-            result = estimate(config, sample_estimation_data)
-            assert isinstance(result, EstimationResult)
-        except GrmpyError as e:
-            # Expected if legacy modules aren't available
-            pytest.skip(f"Legacy semiparametric module not available: {e}")
+        result = grmpy.estimate(config, sample_estimation_data)
+        assert isinstance(result, EstimationResult)
 
 
 @pytest.mark.integration
@@ -80,20 +76,15 @@ class TestSimulationPipeline:
 
     def test_simulate_requires_config(self):
         """simulate() raises GrmpyError if no SIMULATION config."""
-        from grmpy.simulators import simulate
-
         config = Config(simulation=None)
 
         with pytest.raises(GrmpyError) as exc_info:
-            simulate(config)
+            grmpy.simulate(config)
 
         assert "simulation" in str(exc_info.value).lower()
 
     def test_simulate_basic_workflow(self):
         """simulate() generates data with valid config."""
-        from grmpy.core.contracts import SimulationConfig, SimulationResult
-        from grmpy.simulators import simulate
-
         config = Config(
             simulation=SimulationConfig(
                 function="roy_model",
@@ -106,7 +97,7 @@ class TestSimulationPipeline:
             )
         )
 
-        result = simulate(config)
+        result = grmpy.simulate(config)
         assert isinstance(result, SimulationResult)
         assert isinstance(result.data, pd.DataFrame)
         assert len(result.data) == 50

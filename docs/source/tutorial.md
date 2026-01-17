@@ -1,34 +1,6 @@
 # Tutorial
 
-We now illustrate the basic capabilities of the `grmpy` package. We start by outlining some basic functional form assumptions before introducing alternative models that can be used to estimate the marginal treatment effect (MTE). We then turn to some simple use cases.
-
-## Assumptions
-
-The `grmpy` package implements the normal linear-in-parameters version of the generalized Roy model. Both potential outcomes and the choice $(Y_1, Y_0, D)$ are a linear function of the individual's observables $(X, Z)$ and random components $(U_1, U_0, V)$.
-
-$$
-Y_1 = X \beta_1 + U_1 \\
-Y_0 = X \beta_0 + U_0 \\
-D = I[D^{*} > 0] \\
-D^{*} = Z \gamma - V
-$$
-
-Individuals decide to select into treatment if the latent indicator variable $D^{*}$ is positive. Depending on their decision, we either observe $Y_1$ or $Y_0$.
-
-### Parametric Normal Model
-
-The parametric model imposes the assumption of joint normality of the unobservables $(U_1, U_0, V) \sim \mathcal{N}(0, \Sigma)$ with mean zero and covariance matrix $\Sigma$.
-
-### Semiparametric Model
-
-The semiparametric approach invokes no assumption on the distribution of the unobservables. It requires a weaker condition $(X,Z) \perp (U_1, U_0, V)$.
-
-Under this assumption, the MTE is:
-
-* additively separable in $X$ and $U_D$, which means that the shape of the MTE is independent of $X$, and
-* identified over the common support of $P(Z)$, unconditional on $X$.
-
-The assumption of common support is crucial for the application of LIV and needs to be carefully evaluated every time. It is defined as the region where the support of $P(Z)$ given $D=1$ and the support of $P(Z)$ given $D=0$ overlap.
+This tutorial covers the configuration and API usage of `grmpy`. For the economic theory behind the generalized Roy model, see the [course documentation](https://eisenhauerio.github.io/courses-business-decisions/).
 
 ## Model Specification
 
@@ -150,15 +122,13 @@ The *SCIPY-POWELL* block contains the specifications for the *POWELL* minimizati
 | xtol | float | relative error in solution values *xopt* that is acceptable for convergence |
 | ftol | float | relative error in fun(*xopt*) that is acceptable for convergence |
 
-## Examples
-
-In the following chapter we explore the basic features of the `grmpy` package. The resources for the tutorial are also available [online](https://github.com/OpenSourceEconomics/grmpy/tree/master/docs/tutorial). So far the package provides the features to simulate a sample from the generalized Roy model and to estimate some parameters of interest for a provided sample as specified in your initialization file.
+## API Examples
 
 ### Parametric Normal Model
 
 **Simulation**
 
-First we will take a look at the simulation feature. For simulating a sample from the generalized Roy model you use the `simulate()` function provided by the package. For simulating a sample of your choice you have to provide the path of your initialization file as an input to the function.
+For simulating a sample from the generalized Roy model you use the `simulate()` function provided by the package. For simulating a sample of your choice you have to provide the path of your initialization file as an input to the function.
 
 ```python
 import grmpy

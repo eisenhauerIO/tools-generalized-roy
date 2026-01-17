@@ -7,7 +7,7 @@ enabling contracts.py to derive valid options rather than hard-coding.
 
 from typing import List
 
-from grmpy.simulators.adapter_roy_model import simulate
+from grmpy.simulators.simulate import simulate
 
 # Available simulation functions - used by contracts.py for validation
 AVAILABLE_FUNCTIONS: List[str] = ["roy_model"]

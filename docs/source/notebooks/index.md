@@ -6,7 +6,5 @@ Interactive tutorials demonstrating the grmpy package capabilities.
 :maxdepth: 1
 :titlesonly:
 
-grmpy_tutorial_notebook
-tutorial_semipar_notebook
-ose_lecture
+quickstart
 ```
