@@ -13,15 +13,10 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "myst_parser",
-    "nbsphinx",
-    "sphinxcontrib.bibtex",
 ]
 
 # Show TODO items locally, hide in production builds
 todo_include_todos = os.environ.get("SPHINX_PROD", "0") != "1"
-
-# Bibliography configuration
-bibtex_bibfiles = ["references.bib"]
 
 # Accept Markdown files as source as well as reStructuredText
 source_suffix = {
@@ -50,32 +45,10 @@ html_context = {
     "conf_py_path": "/docs/source/",
 }
 
-# nbsphinx settings: don't execute notebooks (they require specific data files)
-# The notebooks can be run interactively but not during docs build
-nbsphinx_execute = "never"
-nbsphinx_allow_errors = True
-
-# MathJax configuration for proper LaTeX rendering in notebooks
+# MathJax configuration for proper LaTeX rendering
 mathjax3_config = {
     "tex": {
         "inlineMath": [["$", "$"], ["\\(", "\\)"]],
         "processEscapes": True,
     },
 }
-
-# Add notebook info bar
-_gh_base = "https://github.com/eisenhauerIO/generalized-roy/blob/main/docs/source"
-_colab_base = "https://colab.research.google.com/github/eisenhauerIO/generalized-roy"
-
-nbsphinx_prolog = rf"""
-{{% set docname = env.doc2path(env.docname, base=None) %}}
-.. |colab| image:: https://colab.research.google.com/assets/colab-badge.svg
-    :target: {_colab_base}/blob/main/docs/source/{{{{ docname }}}}
-
-.. only:: html
-
-    .. nbinfo::
-        Download the notebook `here <{_gh_base}/{{{{ docname }}}}>`__!
-        Interactive online version: |colab|
-
-"""

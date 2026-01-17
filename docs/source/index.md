@@ -15,6 +15,4 @@ For **economic theory, derivations, treatment effects, and Monte Carlo studies**
 :maxdepth: 1
 
 tutorial
-references
-notebooks/index
 ```

@@ -2,6 +2,48 @@
 
 This tutorial covers the configuration and API usage of `grmpy`. For the economic theory behind the generalized Roy model, see the [course documentation](https://eisenhauerio.github.io/courses-business-decisions/).
 
+## Quickstart
+
+### Setup
+
+```python
+import grmpy
+```
+
+### Simulate Data
+
+Simulate a dataset from the generalized Roy model using a YAML configuration file.
+
+```python
+data = grmpy.simulate("tutorial.grmpy.yml")
+data.head()
+```
+
+The simulated data contains:
+- `Y1`, `Y0`: Potential outcomes
+- `D`: Treatment indicator
+- `Y`: Observed outcome
+- `X2`, `X3`: Covariates
+- `U1`, `U0`, `V`: Unobservables (available in simulation)
+
+### Parametric Estimation
+
+Estimate the model parameters assuming joint normality of unobservables.
+
+```python
+rslt = grmpy.fit("tutorial.grmpy.yml", semipar=False)
+```
+
+### Semiparametric Estimation
+
+For semiparametric estimation using Local Instrumental Variables (LIV):
+
+```python
+rslt_semipar = grmpy.fit("config.yml", semipar=True)
+```
+
+This approach makes no distributional assumptions on unobservables. See configuration details below.
+
 ## Model Specification
 
 You can specify the details of the model in an initialization file ([example](https://github.com/OpenSourceEconomics/grmpy/blob/master/docs/tutorial/tutorial.grmpy.yml)). This file contains several blocks:
@@ -53,7 +95,7 @@ Depending on the model, different input parameters are required.
 | trim_support | bool | Trim the data outside the common support, recommended (default is *True*) |
 | reestimate_p | bool | Re-estimate $P(Z)$ after trimming, not recommended (default is *False*) |
 
-In most empirical applications, bandwidth choices between 0.2 and 0.4 are appropriate. {cite}`Fan1994` find that a gridsize of 400 is a good default for graphical analysis. For data sets with less than 400 observations, we recommend a gridsize equivalent to the maximum number of observations that remain after trimming the common support. If the data set of size N is large enough, a gridsize of 400 should be considered as the minimal number of evaluation points. Since `grmpy`'s algorithm is fast enough, gridsize can be easily increased to N evaluation points.
+In most empirical applications, bandwidth choices between 0.2 and 0.4 are appropriate. Fan (1994) find that a gridsize of 400 is a good default for graphical analysis. For data sets with less than 400 observations, we recommend a gridsize equivalent to the maximum number of observations that remain after trimming the common support. If the data set of size N is large enough, a gridsize of 400 should be considered as the minimal number of evaluation points. Since `grmpy`'s algorithm is fast enough, gridsize can be easily increased to N evaluation points.
 
 The `rbandwidth`, which is 0.05 by default, specifies the bandwidth for the LOESS (Locally Estimated Scatterplot Smoothing) regression of $X$, $X \times p$, and $Y$ on $\widehat{P}(Z)$. If the sample size is small (N < 400), the user may need to increase `rbandwidth` to 0.1. Otherwise `grmpy` will throw an error.
 
