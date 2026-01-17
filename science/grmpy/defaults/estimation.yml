@@ -1,0 +1,31 @@
+# Default estimation configuration for grmpy
+#
+# Design Decision: FUNCTION + PARAMS pattern matches impact-engine for
+# consistency across the organization's tooling.
+
+ESTIMATION:
+  # Which estimation function to use: "parametric" or "semiparametric"
+  FUNCTION: parametric
+
+  PARAMS:
+    # Optimizer for parametric estimation
+    # Options: BFGS, POWELL, L-BFGS-B
+    optimizer: BFGS
+
+    # Maximum iterations for optimization
+    max_iterations: 10000
+
+    # Convergence tolerance
+    tolerance: 1.0e-6
+
+    # Semiparametric options
+    # Number of grid points for MTE evaluation
+    gridsize: 500
+
+    # Propensity score range for common support
+    ps_range: [0.005, 0.995]
+
+    # Minimum sample size for semiparametric estimation
+    # Design Decision: 100 is conservative based on simulation studies
+    # showing unreliable local polynomial estimates with fewer points
+    min_sample_size: 100
