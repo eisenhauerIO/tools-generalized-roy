@@ -1,0 +1,41 @@
+name: tools-generalized-roy
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python>=3.11
+  - pip
+
+  # Core dependencies
+  - linearmodels
+  - numpy
+  - matplotlib
+  - oyaml
+  - pandas
+  - pyyaml
+  - scikit-learn
+  - scipy
+  - seaborn
+  - statsmodels
+
+  # Dev dependencies
+  - pytest>=7.0
+  - pytest-cov>=4.0
+  - pytest-xdist>=3.0
+  - sphinx>=6.0
+  - sphinx-rtd-theme
+  - myst-parser
+  - nbsphinx
+  - pypandoc
+  - ipykernel
+  - sphinxcontrib-bibtex
+  - nbconvert
+  - ruff
+  - pre-commit
+  - jupyterlab
+
+  - pip:
+      - scikit-misc
+      - -e .

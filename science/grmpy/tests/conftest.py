@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-
 # -----------------------------------------------------------------------------
 # Markers
 # -----------------------------------------------------------------------------
@@ -22,13 +21,9 @@ import pytest
 
 def pytest_configure(config):
     """Register custom markers."""
-    config.addinivalue_line(
-        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')"
-    )
+    config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
     config.addinivalue_line("markers", "integration: marks integration tests")
-    config.addinivalue_line(
-        "markers", "regression: marks regression tests against vault"
-    )
+    config.addinivalue_line("markers", "regression: marks regression tests against vault")
 
 
 # -----------------------------------------------------------------------------
@@ -104,17 +99,22 @@ def sample_estimation_data(seeded_rng) -> pd.DataFrame:
 
 @pytest.fixture
 def sample_config_dict() -> dict:
-    """Minimal valid configuration dictionary."""
+    """Minimal valid configuration dictionary using FUNCTION + PARAMS pattern."""
     return {
         "ESTIMATION": {
-            "method": "parametric",
-            "file": "data.pkl",
-            "dependent": "Y",
-            "treatment": "D",
+            "FUNCTION": "parametric",
+            "PARAMS": {
+                "file": "data.pkl",
+                "dependent": "Y",
+                "treatment": "D",
+            },
         },
         "SIMULATION": {
-            "agents": 1000,
-            "seed": 42,
+            "FUNCTION": "roy_model",
+            "PARAMS": {
+                "agents": 1000,
+                "seed": 42,
+            },
         },
     }
 
@@ -155,37 +155,6 @@ def invalid_config_missing_field(temp_directory) -> Path:
         yaml.dump(config, f)
 
     return config_path
-
-
-# -----------------------------------------------------------------------------
-# Fixtures: Mock Objects
-# -----------------------------------------------------------------------------
-
-
-@pytest.fixture
-def mock_estimator():
-    """
-    Provide mock estimator for testing manager/factory without real computation.
-
-    Design Decision: Uses protocol-based mock to verify interface compliance
-    without coupling to specific implementations.
-    """
-    from unittest.mock import MagicMock
-
-    from grmpy.estimators.base import Estimator
-
-    mock = MagicMock(spec=Estimator)
-    mock.validate_connection.return_value = True
-    mock.get_required_columns.return_value = ["Y", "D", "Z"]
-    mock.fit.return_value = {
-        "mte": np.zeros(10),
-        "mte_x": np.zeros((100, 10)),
-        "mte_u": np.zeros(10),
-        "quantiles": np.linspace(0, 1, 10),
-        "b0": np.array([1.0]),
-        "b1": np.array([0.5]),
-    }
-    return mock
 
 
 # -----------------------------------------------------------------------------

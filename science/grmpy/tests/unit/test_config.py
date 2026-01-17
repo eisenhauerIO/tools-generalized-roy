@@ -8,7 +8,7 @@ import pytest
 import yaml
 
 from grmpy.config import DEFAULTS, _deep_merge, _load_yaml, process_config
-from grmpy.core.exceptions import ConfigurationError
+from grmpy.core.exceptions import GrmpyError
 
 
 class TestDeepMerge:
@@ -70,11 +70,11 @@ class TestLoadYaml:
         assert result == {}
 
     def test_load_invalid_yaml_raises_error(self, temp_directory):
-        """Invalid YAML raises ConfigurationError."""
+        """Invalid YAML raises GrmpyError."""
         config_path = temp_directory / "invalid.yml"
         config_path.write_text("key: [unclosed bracket")
 
-        with pytest.raises(ConfigurationError) as exc_info:
+        with pytest.raises(GrmpyError) as exc_info:
             _load_yaml(config_path)
 
         assert "Failed to parse" in str(exc_info.value)
@@ -85,11 +85,15 @@ class TestProcessConfig:
 
     def test_process_config_loads_file(self, temp_directory):
         """process_config loads and parses YAML file."""
+        # Create dummy data file so validation passes
+        data_path = temp_directory / "data.pkl"
+        data_path.touch()
+
         config_path = temp_directory / "config.yml"
         config_content = {
             "ESTIMATION": {
-                "method": "parametric",
-                "file": "data.pkl",
+                "FUNCTION": "parametric",
+                "PARAMS": {"file": "data.pkl"},
             }
         }
         with open(config_path, "w") as f:
@@ -98,15 +102,19 @@ class TestProcessConfig:
         config = process_config(config_path)
 
         assert config.estimation is not None
-        assert config.estimation.method == "parametric"
+        assert config.estimation.function == "parametric"
 
     def test_process_config_merges_defaults(self, temp_directory):
         """process_config merges user config with defaults."""
+        # Create dummy data file so validation passes
+        data_path = temp_directory / "data.pkl"
+        data_path.touch()
+
         config_path = temp_directory / "config.yml"
         config_content = {
             "ESTIMATION": {
-                "method": "parametric",
-                "file": "data.pkl",
+                "FUNCTION": "parametric",
+                "PARAMS": {"file": "data.pkl"},
             }
         }
         with open(config_path, "w") as f:
@@ -118,28 +126,28 @@ class TestProcessConfig:
         assert config.estimation.optimizer == "BFGS"
 
     def test_process_config_raises_for_missing_file(self):
-        """process_config raises ConfigurationError for missing file."""
-        with pytest.raises(ConfigurationError) as exc_info:
+        """process_config raises GrmpyError for missing file."""
+        with pytest.raises(GrmpyError) as exc_info:
             process_config("nonexistent.yml")
 
         assert "not found" in str(exc_info.value)
 
-    def test_process_config_validates_estimation_method(self, temp_directory):
-        """process_config validates estimation method."""
+    def test_process_config_validates_estimation_function(self, temp_directory):
+        """process_config validates estimation function."""
         config_path = temp_directory / "config.yml"
         config_content = {
             "ESTIMATION": {
-                "method": "invalid_method",
-                "file": "data.pkl",
+                "FUNCTION": "invalid_function",
+                "PARAMS": {"file": "data.pkl"},
             }
         }
         with open(config_path, "w") as f:
             yaml.dump(config_content, f)
 
-        with pytest.raises(ConfigurationError) as exc_info:
+        with pytest.raises(GrmpyError) as exc_info:
             process_config(config_path)
 
-        assert "invalid_method" in str(exc_info.value)
+        assert "invalid_function" in str(exc_info.value)
 
 
 class TestDefaults:
@@ -153,12 +161,13 @@ class TestDefaults:
         """DEFAULTS contains SIMULATION section."""
         assert "SIMULATION" in DEFAULTS
 
-    def test_estimation_defaults_has_method(self):
-        """Estimation defaults include method."""
-        assert "method" in DEFAULTS["ESTIMATION"]
-        assert DEFAULTS["ESTIMATION"]["method"] == "parametric"
+    def test_estimation_defaults_has_function(self):
+        """Estimation defaults include function."""
+        assert "FUNCTION" in DEFAULTS["ESTIMATION"]
+        assert DEFAULTS["ESTIMATION"]["FUNCTION"] == "parametric"
 
     def test_estimation_defaults_has_optimizer(self):
-        """Estimation defaults include optimizer."""
-        assert "optimizer" in DEFAULTS["ESTIMATION"]
-        assert DEFAULTS["ESTIMATION"]["optimizer"] == "BFGS"
+        """Estimation defaults include optimizer in PARAMS."""
+        assert "PARAMS" in DEFAULTS["ESTIMATION"]
+        assert "optimizer" in DEFAULTS["ESTIMATION"]["PARAMS"]
+        assert DEFAULTS["ESTIMATION"]["PARAMS"]["optimizer"] == "BFGS"

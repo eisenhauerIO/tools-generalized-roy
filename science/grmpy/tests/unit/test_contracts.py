@@ -16,7 +16,7 @@ from grmpy.core.contracts import (
     EstimationResult,
     SimulationConfig,
 )
-from grmpy.core.exceptions import ConfigurationError, DataValidationError
+from grmpy.core.exceptions import GrmpyError
 
 
 class TestDataSchema:
@@ -29,11 +29,11 @@ class TestDataSchema:
         schema.validate(df)  # Should not raise
 
     def test_validate_rejects_missing_columns(self):
-        """Schema raises DataValidationError for missing columns."""
+        """Schema raises GrmpyError for missing columns."""
         schema = DataSchema(required_fields=["A", "B", "C"])
         df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
 
-        with pytest.raises(DataValidationError) as exc_info:
+        with pytest.raises(GrmpyError) as exc_info:
             schema.validate(df)
 
         assert "C" in str(exc_info.value)
@@ -76,11 +76,11 @@ class TestEstimationDataSchema:
         schema.validate(sample_estimation_data)  # Should not raise
 
     def test_validate_rejects_missing_columns(self):
-        """Schema raises DataValidationError listing missing columns."""
+        """Schema raises GrmpyError listing missing columns."""
         schema = EstimationDataSchema()
         incomplete_df = pd.DataFrame({"Y": [1, 2], "D": [0, 1]})  # Missing Z
 
-        with pytest.raises(DataValidationError) as exc_info:
+        with pytest.raises(GrmpyError) as exc_info:
             schema.validate(incomplete_df)
 
         assert "Z" in str(exc_info.value)
@@ -92,7 +92,7 @@ class TestEstimationDataSchema:
         cols = {"Y": [1], "D": [1], "Z": [1]}
         del cols[missing_col]
 
-        with pytest.raises(DataValidationError) as exc_info:
+        with pytest.raises(GrmpyError) as exc_info:
             schema.validate(pd.DataFrame(cols))
 
         assert missing_col in str(exc_info.value)
@@ -104,33 +104,33 @@ class TestEstimationConfig:
     def test_validate_accepts_valid_config(self):
         """Valid config passes validation."""
         config = EstimationConfig(
-            method="parametric",
+            function="parametric",
             file="data.pkl",
         )
         config.validate()  # Should not raise
 
-    def test_validate_rejects_invalid_method(self):
-        """Invalid method raises ConfigurationError with options."""
+    def test_validate_rejects_invalid_function(self):
+        """Invalid function raises GrmpyError with options."""
         config = EstimationConfig(
-            method="invalid_method",
+            function="invalid_function",
             file="data.pkl",
         )
 
-        with pytest.raises(ConfigurationError) as exc_info:
+        with pytest.raises(GrmpyError) as exc_info:
             config.validate()
 
-        assert "invalid_method" in str(exc_info.value)
+        assert "invalid_function" in str(exc_info.value)
         assert "parametric" in str(exc_info.value)  # Lists valid options
 
     def test_validate_rejects_invalid_optimizer(self):
-        """Invalid optimizer raises ConfigurationError."""
+        """Invalid optimizer raises GrmpyError."""
         config = EstimationConfig(
-            method="parametric",
+            function="parametric",
             file="data.pkl",
             optimizer="invalid_optimizer",
         )
 
-        with pytest.raises(ConfigurationError) as exc_info:
+        with pytest.raises(GrmpyError) as exc_info:
             config.validate()
 
         assert "invalid_optimizer" in str(exc_info.value)
@@ -141,14 +141,14 @@ class TestSimulationConfig:
 
     def test_validate_accepts_valid_config(self):
         """Valid config passes validation."""
-        config = SimulationConfig(agents=1000)
+        config = SimulationConfig(function="roy_model", agents=1000)
         config.validate()  # Should not raise
 
     def test_validate_rejects_non_positive_agents(self):
-        """Non-positive agents raises ConfigurationError."""
-        config = SimulationConfig(agents=0)
+        """Non-positive agents raises GrmpyError."""
+        config = SimulationConfig(function="roy_model", agents=0)
 
-        with pytest.raises(ConfigurationError) as exc_info:
+        with pytest.raises(GrmpyError) as exc_info:
             config.validate()
 
         assert "positive" in str(exc_info.value).lower()
@@ -207,7 +207,7 @@ class TestConfig:
         config = Config.from_dict(sample_config_dict)
 
         assert config.estimation is not None
-        assert config.estimation.method == "parametric"
+        assert config.estimation.function == "parametric"
 
     def test_from_dict_creates_simulation_config(self, sample_config_dict):
         """from_dict creates SimulationConfig from SIMULATION section."""
