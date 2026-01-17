@@ -111,13 +111,6 @@ class TestCarneiroReplication:
 
         This test verifies that grmpy's semiparametric estimator produces
         results matching R's locpoly implementation used in the original paper.
-
-        KNOWN ISSUE: Currently fails with ~1.2% relative difference because:
-        - Expected values were generated using R's locpoly function
-        - Current implementation uses scipy UnivariateSpline fallback
-        - The kernreg package (Python binding to locpoly) is not installed
-
-        To fix: Install kernreg package for exact replication of R's locpoly.
         """
         config = Config(
             estimation=EstimationConfig(
@@ -136,17 +129,5 @@ class TestCarneiroReplication:
 
         result = grmpy.estimate(config, carneiro_data)
 
-        # TODO: Tighten tolerance once kernreg is installed
-        # Current scipy fallback gives ~1.2% relative difference from R's locpoly
-        np.testing.assert_array_almost_equal(
-            result.mte_u,
-            expected_mte_u,
-            decimal=6,
-            err_msg="MTE_U values do not match expected (R locpoly). " "Install kernreg for exact match.",
-        )
-        np.testing.assert_array_almost_equal(
-            result.mte,
-            expected_mte,
-            decimal=6,
-            err_msg="MTE values do not match expected (R locpoly). " "Install kernreg for exact match.",
-        )
+        np.testing.assert_array_almost_equal(result.mte_u, expected_mte_u, decimal=6)
+        np.testing.assert_array_almost_equal(result.mte, expected_mte, decimal=6)
