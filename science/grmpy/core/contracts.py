@@ -51,9 +51,7 @@ class DataSchema:
         """
         missing = set(self.required_fields) - set(df.columns)
         if missing:
-            raise GrmpyError(
-                f"Missing required columns: {sorted(missing)}. " f"Available columns: {sorted(df.columns)}"
-            )
+            raise GrmpyError(f"Missing required columns: {sorted(missing)}. Available columns: {sorted(df.columns)}")
 
     def from_external(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -170,12 +168,12 @@ class EstimationConfig:
 
         if self.function not in AVAILABLE_FUNCTIONS:
             raise GrmpyError(
-                f"Invalid estimation FUNCTION: '{self.function}'. " f"Available options: {AVAILABLE_FUNCTIONS}"
+                f"Invalid estimation FUNCTION: '{self.function}'. Available options: {AVAILABLE_FUNCTIONS}"
             )
 
         valid_optimizers = ["BFGS", "POWELL", "L-BFGS-B"]
         if self.optimizer not in valid_optimizers:
-            raise GrmpyError(f"Invalid optimizer: '{self.optimizer}'. " f"Available options: {valid_optimizers}")
+            raise GrmpyError(f"Invalid optimizer: '{self.optimizer}'. Available options: {valid_optimizers}")
 
 
 @dataclass
@@ -215,7 +213,7 @@ class SimulationConfig:
 
         if self.function not in AVAILABLE_FUNCTIONS:
             raise GrmpyError(
-                f"Invalid simulation FUNCTION: '{self.function}'. " f"Available options: {AVAILABLE_FUNCTIONS}"
+                f"Invalid simulation FUNCTION: '{self.function}'. Available options: {AVAILABLE_FUNCTIONS}"
             )
 
         if self.agents <= 0:

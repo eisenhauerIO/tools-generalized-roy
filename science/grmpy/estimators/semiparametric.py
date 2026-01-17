@@ -89,13 +89,13 @@ def _validate_data(data: pd.DataFrame, config: EstimationConfig) -> None:
     required = [config.dependent, config.treatment]
     missing = set(required) - set(data.columns)
     if missing:
-        raise GrmpyError(f"Missing required columns: {sorted(missing)}. " f"Available columns: {sorted(data.columns)}")
+        raise GrmpyError(f"Missing required columns: {sorted(missing)}. Available columns: {sorted(data.columns)}")
 
     # Check treatment is binary
     unique_vals = data[config.treatment].unique()
     if not set(unique_vals).issubset({0, 1}):
         raise GrmpyError(
-            f"Treatment column '{config.treatment}' must be binary (0/1). " f"Found values: {sorted(unique_vals)}"
+            f"Treatment column '{config.treatment}' must be binary (0/1). Found values: {sorted(unique_vals)}"
         )
 
 
@@ -393,7 +393,7 @@ def _generate_residuals(exog: pd.Series, endog: pd.DataFrame, bandwidth: float =
             return res
     except Exception as e:
         raise GrmpyError(
-            f"Loess regression failed: {e}. " "This may occur with very small samples or extreme bandwidth values."
+            f"Loess regression failed: {e}. This may occur with very small samples or extreme bandwidth values."
         )
 
 

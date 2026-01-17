@@ -52,7 +52,7 @@ def estimate(config: Config, data: pd.DataFrame) -> EstimationResult:
         return estimate_semiparametric(config, data)
 
     else:
-        raise GrmpyError(f"Unknown ESTIMATION.FUNCTION: '{function}'. " f"Available: {AVAILABLE_FUNCTIONS}")
+        raise GrmpyError(f"Unknown ESTIMATION.FUNCTION: '{function}'. Available: {AVAILABLE_FUNCTIONS}")
 
 
 __all__ = ["estimate", "AVAILABLE_FUNCTIONS"]

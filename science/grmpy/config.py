@@ -67,7 +67,7 @@ def process_config(path: Union[str, Path]) -> Config:
 
     # Validate file exists
     if not path.exists():
-        raise GrmpyError(f"Configuration file not found: '{path}'. " f"Please provide a valid .yml or .yaml file.")
+        raise GrmpyError(f"Configuration file not found: '{path}'. Please provide a valid .yml or .yaml file.")
 
     # Load user configuration
     user_config = _load_yaml(path)
@@ -125,7 +125,7 @@ def _load_yaml(path: Path) -> Dict[str, Any]:
             content = yaml.safe_load(f)
             return content if content is not None else {}
     except yaml.YAMLError as e:
-        raise GrmpyError(f"Failed to parse YAML configuration: {path}\n" f"Error: {e}")
+        raise GrmpyError(f"Failed to parse YAML configuration: {path}\nError: {e}")
 
 
 def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
@@ -171,7 +171,7 @@ def _validate_config(config: Config) -> None:
             data_path = Path(config.estimation.file)
             if not data_path.exists():
                 raise GrmpyError(
-                    f"Estimation data file not found: '{data_path}'. " f"Please provide a valid data file path."
+                    f"Estimation data file not found: '{data_path}'. Please provide a valid data file path."
                 )
 
     if config.simulation is not None:

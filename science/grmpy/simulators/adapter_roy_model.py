@@ -42,7 +42,7 @@ def simulate(config: Config) -> SimulationResult:
         GrmpyError: If simulation configuration is missing or invalid.
     """
     if config.simulation is None:
-        raise GrmpyError("No simulation configuration found in config file. " "Please add a SIMULATION section.")
+        raise GrmpyError("No simulation configuration found in config file. Please add a SIMULATION section.")
 
     sim_config = config.simulation
 

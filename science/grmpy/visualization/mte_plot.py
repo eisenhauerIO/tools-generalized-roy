@@ -36,14 +36,7 @@ def plot_mte_curve(
     if show_confidence and "mte_min" in result.metadata and "mte_max" in result.metadata:
         mte_min = result.metadata["mte_min"]
         mte_max = result.metadata["mte_max"]
-        ax.fill_between(
-            quantiles,
-            mte_min,
-            mte_max,
-            alpha=0.2,
-            color="blue",
-            label="X variation"
-        )
+        ax.fill_between(quantiles, mte_min, mte_max, alpha=0.2, color="blue", label="X variation")
 
     # Formatting
     ax.set_xlabel("Unobserved Resistance ($u_D$)", fontsize=12)
